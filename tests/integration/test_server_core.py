@@ -6,7 +6,7 @@ import threading
 import time
 import unittest
 
-from harness import Server, get, read_response, request
+from harness import Server, get, metrics, read_response, request
 
 
 class Basics(unittest.TestCase):
@@ -24,6 +24,7 @@ class Basics(unittest.TestCase):
         self.assertEqual(st, 200)
         self.assertEqual(body["status"], "ok")
         self.assertEqual(body["workers"], 4)
+        self.assertEqual(body["database"], "up")
         self.assertEqual(len(h["x-request-id"]), 16)
         self.assertEqual(h["x-content-type-options"], "nosniff")
 
@@ -101,10 +102,10 @@ class Basics(unittest.TestCase):
         self.assertEqual(results.count(200), 200)
 
     def test_metrics_count_requests(self):
-        before = get(self.srv, "/metrics")[2]["requests_total"]
+        before = metrics(self.srv)["requests_total"]
         for _ in range(5):
             get(self.srv, "/healthz")
-        after = get(self.srv, "/metrics")[2]
+        after = metrics(self.srv)
         self.assertGreaterEqual(after["requests_total"] - before, 5)
         self.assertEqual(sum(after["latency_ms_hist"]["count"]), after["requests_total"])
 
@@ -127,7 +128,7 @@ class Overload(unittest.TestCase):
             self.assertEqual(read_response(queued)[0], 200)
             st, _, _ = request(srv, b"GET /healthz HTTP/1.1\r\n\r\n")      # recovered
             self.assertEqual(st, 200)
-            m = get(srv, "/metrics")[2]
+            m = metrics(srv)
             self.assertGreaterEqual(m["connections_rejected_overload"], 1)
             self.assertEqual(m["queue"]["high_water"], 1)
         finally:
