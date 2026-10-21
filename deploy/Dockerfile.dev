@@ -3,6 +3,6 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential gdb valgrind pkg-config procps curl ca-certificates python3 \
-      libmariadb-dev libsodium-dev \
+      libmariadb-dev libsodium-dev mysql-client \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /work

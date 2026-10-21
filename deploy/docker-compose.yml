@@ -1,12 +1,14 @@
-# Phase 2 slice: database only. App + Apache services are added in later phases.
+name: stockforge
+# Database only for now; Apache + app services arrive in Phase 7.
+# Use:  docker compose -f deploy/docker-compose.yml --env-file .env up -d --wait
 services:
   db:
     image: mysql:8.4
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-stockforge}
-    ports:
-      - "127.0.0.1:3307:3306"
+    # No host port is published: the app and tests reach the db over the compose
+    # network. To use a GUI client, add:  ports: ["127.0.0.1:<free port>:3306"]
     command: ["--character-set-server=utf8mb4", "--transaction-isolation=READ-COMMITTED"]
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
