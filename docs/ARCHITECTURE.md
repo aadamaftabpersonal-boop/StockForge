@@ -9,7 +9,7 @@ Browser ──HTTPS──▶ Apache 2.4 (TLS, static /, gzip, proxy /api)
               ┌─────────────── stockforged (C) ────────────────┐
               │ acceptor thread                                │
               │   accept4() ─▶ bounded queue (cap Q)           │
-              │                 mutex + not_empty + not_full   │
+              │                 mutex + not_empty (push never blocks)│
               │                        │                       │
               │        ┌───────────────┼────────────┐          │
               │     worker 1  …  worker N  (pthreads)          │
@@ -23,6 +23,17 @@ Browser ──HTTPS──▶ Apache 2.4 (TLS, static /, gzip, proxy /api)
 ```
 
 Overload: queue full ⇒ acceptor writes `503` + `Retry-After: 1` itself and closes. Never blocks, never unbounded memory.
+
+### Server-core design notes (implemented in Phase 3)
+
+- **Why no `not_full` condvar:** the acceptor must never stall, or `accept()` backlog grows invisibly. Full queue ⇒ `503` immediately. Backpressure is explicit and measurable (`connections_rejected_overload`).
+- **Lost-wakeup safety:** `fdq_pop` waits in a `while (len == 0 && !closed)` loop; `fdq_close` uses `pthread_cond_broadcast` so every idle worker observes shutdown. Tested with 6 blocked poppers.
+- **Shutdown:** signals are blocked in all threads; one `sigwait()` thread writes to a self-pipe, so nothing runs in async-signal context. Sequence: wake acceptor → close listen fd → close queue → workers drain accepted work → join → exit 0.
+- **Request deadline:** one monotonic deadline for the *whole* request (not per `recv`), so a slowloris client cannot reset the timer by trickling bytes. Over-deadline ⇒ `408`.
+- **Request-smuggling hygiene:** duplicate/malformed/signed `Content-Length` ⇒ `400`; any `Transfer-Encoding` ⇒ `501`. Apache normalises requests upstream, this is defence in depth.
+- **Lingering close:** closing a socket with unread bytes makes Linux send RST, which can erase the client's copy of our error response. Error paths therefore `shutdown(SHUT_WR)` then drain (≤200 ms, ≤1 MiB) in workers; the acceptor's 503 path drains non-blocking only. *Found by a failing test, not by inspection.*
+- **Known limitation:** `Connection: close` on every response (no keep-alive yet). Apache↔backend connection reuse is a Phase 6 optimisation and will be measured, not assumed.
+- **Known limitation:** the acceptor's overload drain is best-effort; a client whose request bytes arrive after the 503 is sent may see a reset instead of the 503.
 
 ## 2. Module boundaries (`src/`)
 
