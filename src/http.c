@@ -163,6 +163,8 @@ static const char *reason(int s) {
     switch (s) {
     case 200: return "OK";
     case 201: return "Created";
+    case 204: return "No Content";
+    case 415: return "Unsupported Media Type";
     case 400: return "Bad Request";
     case 401: return "Unauthorized";
     case 403: return "Forbidden";
@@ -198,7 +200,7 @@ static int write_all(int fd, struct iovec *iov, int cnt) {
 
 int http_send(int fd, int status, const char *ctype, const char *body, size_t len,
               const char *rid, const char *extra) {
-    char head[512];
+    char head[1024];
     int n = snprintf(head, sizeof head,
         "HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %zu\r\n"
         "X-Request-Id: %s\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-store\r\n"

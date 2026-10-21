@@ -15,6 +15,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include "auth.h"
+#include "db.h"
 #include "http.h"
 #include "log.h"
 #include "metrics.h"
@@ -53,7 +55,12 @@ static void serve_connection(server *s, const fdq_item *it) {
     http_rc rc = http_read_request(fd, &req, &lim);
     int status;
     if (rc == HTTP_OK) {
-        status = router_handle(&s->rctx, fd, &req, rid);
+        char peer[48] = "unknown";
+        struct sockaddr_in pa;
+        socklen_t pl = sizeof pa;
+        if (getpeername(fd, (struct sockaddr *)&pa, &pl) == 0 && pa.sin_family == AF_INET)
+            inet_ntop(AF_INET, &pa.sin_addr, peer, sizeof peer);
+        status = router_handle(&s->rctx, fd, &req, rid, peer);
         log_access(rid, req.method, req.method_len, req.path, req.path_len, status,
                    (now_ns() - t0) / 1000, qwait_us);
         http_req_free(&req);
@@ -82,11 +89,13 @@ static void serve_connection(server *s, const fdq_item *it) {
 static void *worker_main(void *arg) {
     server *s = arg;
     fdq_item it;
+    db_thread_init();                       /* this worker's MySQL connection is created lazily */
     while (fdq_pop(&s->queue, &it) == 0) {
         metrics_worker_busy(+1);
         serve_connection(s, &it);
         metrics_worker_busy(-1);
     }
+    db_thread_end();
     return NULL;
 }
 
@@ -151,6 +160,10 @@ int server_run(const config *cfg) {
     pthread_sigmask(SIG_BLOCK, &set, NULL);
     signal(SIGPIPE, SIG_IGN);
 
+    if (auth_global_init() || db_global_init(cfg)) {
+        log_msg("error", "startup", "crypto/database library init failed");
+        return 1;
+    }
     if (fdq_init(&s.queue, (size_t)cfg->queue_cap)) { log_msg("error", "startup", "queue init failed"); return 1; }
     if (pipe2(s.wake_pipe, O_CLOEXEC)) { log_msg("error", "startup", "pipe2 failed"); return 1; }
     int lfd = open_listener(cfg);
@@ -202,6 +215,7 @@ int server_run(const config *cfg) {
     fdq_close(&s.queue);           /* workers finish queued + in-flight work, then exit */
     for (int i = 0; i < started; i++) pthread_join(workers[i], NULL);
     pthread_join(sigt, NULL);
+    auth_global_free();
     fdq_destroy(&s.queue);
     close(s.wake_pipe[0]);
     close(s.wake_pipe[1]);

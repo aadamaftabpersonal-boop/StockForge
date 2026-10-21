@@ -1,78 +1,157 @@
 #include "router.h"
 
+#include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <time.h>
+#include <strings.h>
 
-#include "metrics.h"
-#include "util.h"
+#include "api.h"
+#include "validate.h"
 
-#define VERSION "0.1.0"
+enum { A_NONE, A_USER, A_ADMIN };
 
-static int path_is(const http_req *r, const char *p) {
-    size_t n = strlen(p);
-    return r->path_len == n && memcmp(r->path, p, n) == 0;
-}
+typedef struct {
+    const char *method;
+    const char *pattern;     /* ":x" matches any one non-empty segment */
+    handler_fn  fn;
+    int         auth;
+    int         debug_only;
+} route;
 
-static int method_is(const http_req *r, const char *m) {
-    size_t n = strlen(m);
-    return r->method_len == n && memcmp(r->method, m, n) == 0;
-}
+static const route ROUTES[] = {
+    {"GET",    "/healthz",                            h_health,               A_NONE,  0},
+    {"GET",    "/metrics",                            h_metrics,              A_NONE,  0},
+    {"GET",    "/debug/sleep",                        h_debug_sleep,          A_NONE,  1},
 
-static int send_json(int fd, int status, const char *rid, const char *body, size_t n) {
-    http_send(fd, status, "application/json", body, n, rid, NULL);
-    return status;
-}
+    {"POST",   "/api/v1/auth/register",               h_register,             A_NONE,  0},
+    {"POST",   "/api/v1/auth/login",                  h_login,                A_NONE,  0},
+    {"POST",   "/api/v1/auth/logout",                 h_logout,               A_USER,  0},
+    {"GET",    "/api/v1/auth/me",                     h_me,                   A_USER,  0},
 
-static int h_health(const router_ctx *c, int fd, const char *rid) {
-    char b[256];
-    uint64_t up = (now_ns() - c->start_ns) / 1000000000ull;
-    int n = snprintf(b, sizeof b,
-        "{\"status\":\"ok\",\"version\":\"" VERSION "\",\"uptime_s\":%llu,"
-        "\"workers\":%d,\"queue_depth\":%zu,\"queue_capacity\":%d}",
-        (unsigned long long)up, c->cfg->workers, fdq_depth(c->queue), c->cfg->queue_cap);
-    return send_json(fd, 200, rid, b, (size_t)n);
-}
+    {"GET",    "/api/v1/categories",                  h_categories,           A_NONE,  0},
+    {"GET",    "/api/v1/products",                    h_products,             A_NONE,  0},
+    {"GET",    "/api/v1/products/:id",                h_product,              A_NONE,  0},
 
-static int h_metrics(const router_ctx *c, int fd, const char *rid) {
-    char b[2048];
-    size_t n = metrics_render(b, sizeof b, fdq_depth(c->queue), fdq_high_water(c->queue),
-                              (size_t)c->cfg->queue_cap, c->cfg->workers);
-    return send_json(fd, 200, rid, b, n);
-}
+    {"GET",    "/api/v1/cart",                        h_cart_get,             A_USER,  0},
+    {"DELETE", "/api/v1/cart",                        h_cart_clear,           A_USER,  0},
+    {"PUT",    "/api/v1/cart/items/:id",              h_cart_put,             A_USER,  0},
+    {"DELETE", "/api/v1/cart/items/:id",              h_cart_delete_item,     A_USER,  0},
 
-/* Debug only (SF_DEBUG=1): GET /debug/sleep?ms=N holds a worker for N ms.
- * Used by tests to saturate the pool and to prove graceful shutdown. */
-static int h_debug_sleep(int fd, const http_req *r, const char *rid) {
-    long ms = 0;
-    char q[32] = {0};
-    memcpy(q, r->query, r->query_len < sizeof q - 1 ? r->query_len : sizeof q - 1);
-    if (strncmp(q, "ms=", 3) == 0) ms = strtol(q + 3, NULL, 10);
-    if (ms < 0) ms = 0;
-    if (ms > 10000) ms = 10000;
-    struct timespec ts = {.tv_sec = ms / 1000, .tv_nsec = (ms % 1000) * 1000000L};
-    while (nanosleep(&ts, &ts) != 0) {}
-    return send_json(fd, 200, rid, "{\"slept\":true}", 14);
-}
+    {"GET",    "/api/v1/orders",                      h_orders,               A_USER,  0},
+    {"GET",    "/api/v1/orders/:id",                  h_order,                A_USER,  0},
 
-int router_handle(const router_ctx *c, int fd, const http_req *r, const char *rid) {
-    int get = method_is(r, "GET");
-    if (path_is(r, "/healthz")) {
-        if (!get) goto bad_method;
-        return h_health(c, fd, rid);
+    {"POST",   "/api/v1/admin/products",              h_admin_product_create, A_ADMIN, 0},
+    {"POST",   "/api/v1/admin/inventory/:id/adjust",  h_admin_stock_adjust,   A_ADMIN, 0},
+    {"GET",    "/api/v1/admin/audit",                 h_admin_audit,          A_ADMIN, 0},
+};
+
+static int split(const char *p, size_t n, const char **seg, size_t *len, int max) {
+    int k = 0;
+    size_t i = 1;                                  /* skip leading '/' */
+    if (n == 0 || p[0] != '/') return -1;
+    for (;;) {
+        size_t j = i;
+        while (j < n && p[j] != '/') j++;
+        if (j == i) return -1;                     /* empty segment: "//" or trailing "/" */
+        if (k == max) return -1;
+        seg[k] = p + i;
+        len[k++] = j - i;
+        if (j >= n) return k;
+        i = j + 1;
     }
-    if (path_is(r, "/metrics")) {          /* TODO(phase 4): admin-only once auth exists */
-        if (!get) goto bad_method;
-        return h_metrics(c, fd, rid);
+}
+
+static int pattern_match(const char *pat, const char **seg, const size_t *len, int n) {
+    const char *ps[API_MAX_SEGS];
+    size_t pl[API_MAX_SEGS];
+    int pn = split(pat, strlen(pat), ps, pl, API_MAX_SEGS);
+    if (pn != n) return 0;
+    for (int i = 0; i < n; i++) {
+        if (ps[i][0] == ':') continue;
+        if (pl[i] != len[i] || memcmp(ps[i], seg[i], len[i]) != 0) return 0;
     }
-    if (c->cfg->debug && path_is(r, "/debug/sleep")) {
-        if (!get) goto bad_method;
-        return h_debug_sleep(fd, r, rid);
+    return 1;
+}
+
+static void client_ip(rctx *c, const char *peer) {
+    snprintf(c->client_ip, sizeof c->client_ip, "%s", peer);
+    if (!c->cfg->trust_proxy) return;
+    /* Apache APPENDS the connecting address to X-Forwarded-For, so the LAST
+     * entry is the one our own proxy observed; earlier entries are client-supplied. */
+    size_t l;
+    const char *x = http_header(c->req, "x-forwarded-for", &l);
+    if (!x || !l) return;
+    size_t s = l;
+    while (s > 0 && x[s - 1] != ',') s--;
+    while (s < l && x[s] == ' ') s++;
+    size_t n = l - s;
+    if (n == 0 || n >= sizeof c->client_ip) return;
+    for (size_t i = 0; i < n; i++)
+        if (!(isxdigit((unsigned char)x[s + i]) || x[s + i] == '.' || x[s + i] == ':')) return;
+    memcpy(c->client_ip, x + s, n);
+    c->client_ip[n] = 0;
+}
+
+static int is_unsafe(const http_req *r) {
+    return !(r->method_len == 3 && memcmp(r->method, "GET", 3) == 0);
+}
+
+int router_handle(const router_ctx *rc, int fd, const http_req *req, const char *rid,
+                  const char *peer) {
+    rctx c;
+    memset(&c, 0, sizeof c);
+    c.fd = fd; c.req = req; c.rid = rid; c.cfg = rc->cfg; c.queue = rc->queue; c.start_ns = rc->start_ns;
+    client_ip(&c, peer);
+
+    c.nseg = split(req->path, req->path_len, c.seg, c.seglen, API_MAX_SEGS);
+    if (c.nseg < 0) return api_err(&c, 404, "NOT_FOUND", "No such route.", NULL);
+
+    const route *hit = NULL;
+    int path_seen = 0;
+    for (size_t i = 0; i < sizeof ROUTES / sizeof ROUTES[0]; i++) {
+        const route *r = &ROUTES[i];
+        if (r->debug_only && !rc->cfg->debug) continue;
+        if (!pattern_match(r->pattern, c.seg, c.seglen, c.nseg)) continue;
+        path_seen = 1;
+        if (strlen(r->method) == req->method_len && memcmp(r->method, req->method, req->method_len) == 0) {
+            hit = r;
+            break;
+        }
     }
-    http_send_error(fd, 404, "NOT_FOUND", "No such route.", rid);
-    return 404;
-bad_method:
-    http_send_error(fd, 405, "METHOD_NOT_ALLOWED", "Method not allowed for this route.", rid);
-    return 405;
+    if (!hit) {
+        if (path_seen) return api_err(&c, 405, "METHOD_NOT_ALLOWED", "Method not allowed for this route.", NULL);
+        return api_err(&c, 404, "NOT_FOUND", "No such route.", NULL);
+    }
+
+    int unsafe = is_unsafe(req);
+    if (unsafe) {
+        /* Browsers always send Origin on cross-site unsafe requests. If it is
+         * present it must be our own host; absent (curl, same-origin forms) is allowed. */
+        size_t ol, hl;
+        const char *o = http_header(req, "origin", &ol), *h = http_header(req, "host", &hl);
+        if (o && h && !origin_matches_host(o, ol, h, hl))
+            return api_err(&c, 403, "ORIGIN_MISMATCH", "Cross-origin request rejected.", NULL);
+        /* Requiring application/json forces a CORS preflight for cross-site pages. */
+        if (req->body_len > 0) {
+            size_t cl;
+            const char *ct = http_header(req, "content-type", &cl);
+            if (!ct || cl < 16 || strncasecmp(ct, "application/json", 16) != 0)
+                return api_err(&c, 415, "UNSUPPORTED_MEDIA_TYPE", "Content-Type must be application/json.", NULL);
+        }
+    }
+
+    c.db = db_get();
+    if (!c.db && hit->fn != h_health)
+        return api_err(&c, 503, "DB_UNAVAILABLE", "Service temporarily unavailable.", NULL);
+
+    if (hit->auth != A_NONE) {
+        int s = api_session(&c);
+        if (s < 0) return api_err(&c, 503, "DB_UNAVAILABLE", "Service temporarily unavailable.", NULL);
+        if (s == 0) return api_err(&c, 401, "UNAUTHENTICATED", "Sign in required.", NULL);
+        if (hit->auth == A_ADMIN && !c.user.is_admin)
+            return api_err(&c, 403, "FORBIDDEN", "Administrator access required.", NULL);
+        if (unsafe && !auth_csrf_ok(&c.user, req))
+            return api_err(&c, 403, "CSRF_INVALID", "Missing or invalid CSRF token.", NULL);
+    }
+    return hit->fn(&c);
 }

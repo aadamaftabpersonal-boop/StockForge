@@ -12,7 +12,9 @@ typedef struct {
 } router_ctx;
 
 /* Dispatches one parsed request and writes exactly one response to fd.
- * Returns the HTTP status that was sent. */
-int router_handle(const router_ctx *ctx, int fd, const http_req *req, const char *request_id);
+ * Gates, in order: route match (404/405) -> Origin check -> Content-Type ->
+ * session (401/403) -> CSRF (403) -> handler. Returns the status sent. */
+int router_handle(const router_ctx *ctx, int fd, const http_req *req, const char *request_id,
+                  const char *peer_ip);
 
 #endif
