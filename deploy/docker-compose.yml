@@ -1,0 +1,19 @@
+# Phase 2 slice: database only. App + Apache services are added in later phases.
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-stockforge}
+    ports:
+      - "127.0.0.1:3307:3306"
+    command: ["--character-set-server=utf8mb4", "--transaction-isolation=READ-COMMITTED"]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - dbdata:/var/lib/mysql
+volumes:
+  dbdata:

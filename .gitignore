@@ -1,0 +1,9 @@
+build/
+*.o
+*.d
+.env
+.tmp/
+.claude/
+bench/results/*.raw
+*.log
+core
