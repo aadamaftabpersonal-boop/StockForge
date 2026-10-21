@@ -43,7 +43,7 @@ class Server:
         # overload tests, so readiness = the server's own "started" log line.
         self.logf = tempfile.TemporaryFile("w+")
         self.proc = subprocess.Popen([BIN], env=e, stderr=self.logf, text=True)
-        deadline = time.time() + 10
+        deadline = time.time() + float(os.environ.get("SF_START_TIMEOUT", "10"))     # valgrind needs ~60
         while time.time() < deadline:
             if '"event":"started"' in self.log():
                 return
@@ -53,7 +53,8 @@ class Server:
         self.stop()
         raise RuntimeError("server did not start: " + self.log())
 
-    def stop(self, sig=signal.SIGTERM, timeout=10):
+    def stop(self, sig=signal.SIGTERM, timeout=None):
+        timeout = timeout or float(os.environ.get("SF_STOP_TIMEOUT", "10"))
         if self.proc.poll() is None:
             self.proc.send_signal(sig)
         try:
@@ -62,6 +63,9 @@ class Server:
             self.proc.kill()
             self.proc.wait()
         log = self.log()
+        if os.environ.get("SF_DUMP_LOG"):                      # diagnostic: show the server's own view
+            print("\n---- server log ----\n" + "\n".join(
+                ln for ln in log.splitlines() if '"event":"access"' not in ln or os.environ["SF_DUMP_LOG"] == "all")[-6000:])
         if os.environ.get("SF_SUMMARIZE_DB_ERRORS"):          # diagnostic: which MySQL errors did the server hit?
             import re
             codes = {}

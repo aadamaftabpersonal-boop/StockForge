@@ -61,9 +61,47 @@ MUTANTS = [
          old='ON l.product_id = i.product_id WHERE i.on_hand <> COALESCE(l.s, 0) LIMIT 20"',
          new='ON l.product_id = i.product_id WHERE 0 LIMIT 20"',
          tests=[f"{CS}.test_reconcile_detects_corruption"]),
-    dict(name="INFORMATIONAL: cart read in random lock order (deadlocks expected, retries must absorb them)",
+    # ---- phase 6: failure handling and security
+    dict(name="db: START TRANSACTION does not reconnect after a dead connection", file="src/db.c",
+         old="        drop_conn(d);               /* nothing has run yet, so reconnecting once is always safe */",
+         new="        return -1;",
+         tests=["test_db_faults.Outages.test_connection_lost_exactly_at_START_TRANSACTION_is_retried_transparently"]),
+    dict(name="THE REAL BUG RESURRECTED: statement errors ignored and no poison guard (autocommit leak)",
+         edits=[("src/orders.c", "if (rows < 0) return APPLY_DBERR; if (rows != 1)", "if (rows != 1 && rows >= 0)"),
+                ("src/db.c", "    if (d->poisoned) {                       /* the transaction is gone;", "    if (0) {                       /* the transaction is gone;")],
+         tests=["test_db_faults.PayFaultSweep", "test_db_faults.CancelFaultSweep", "test_db_faults.ExpiryUnderFaults"]),
+    dict(name="INFORMATIONAL: poison guard alone removed (statement checks still catch it: defence in depth)",
+         file="src/db.c", old="    if (d->poisoned) {                       /* the transaction is gone;",
+         new="    if (0) {                       /* the transaction is gone;",
+         tests=["test_db_faults.PayFaultSweep", "test_db_faults.CancelFaultSweep"], expect="survive"),
+    dict(name="db: commit on a lost transaction reports success", file="src/db.c",
+         old="    if (d->poisoned) {                       /* never report success for a transaction that was lost */",
+         new="    if (0) {                       /* never report success for a transaction that was lost */",
+         tests=["test_db_faults.OutcomeUnknown"], expect="survive"),
+    dict(name="authz: admin audit route downgraded to any logged-in user", file="src/router.c",
+         old='{"GET",    "/api/v1/admin/audit",                 h_admin_audit,          A_ADMIN, 0},',
+         new='{"GET",    "/api/v1/admin/audit",                 h_admin_audit,          A_USER,  0},',
+         tests=["test_authz_matrix.AuthzMatrix.test_every_route_for_every_role"]),
+    dict(name="authz: CSRF check skipped for unsafe requests", file="src/router.c",
+         old="if (unsafe && !auth_csrf_ok(&c.user, req))", new="if (0 && unsafe && !auth_csrf_ok(&c.user, req))",
+         tests=["test_authz_matrix.AuthzMatrix.test_every_authenticated_unsafe_route_demands_csrf"]),
+    dict(name="http: X-Frame-Options header dropped", file="src/http.c",
+         old='"X-Frame-Options: DENY\\r\\nReferrer-Policy: no-referrer\\r\\n"', new='"Referrer-Policy: no-referrer\\r\\n"',
+         tests=["test_auth.Auth.test_defensive_headers_on_every_kind_of_response"]),
+    dict(name="auth: session cap removed", file="src/auth.c",
+         old='" ORDER BY created_at DESC LIMIT 1 OFFSET 9) t)", "uu", uid, uid);',
+         new='" ORDER BY created_at DESC LIMIT 1 OFFSET 9999) t)", "uu", uid, uid);',
+         tests=["test_auth.Auth.test_sessions_per_user_are_capped"]),
+    dict(name="search: invalid UTF-8 treated as word characters (HTTP layer masks it via the 422 fallback; the unit test must catch it)",
+         file="src/validate.c", old="    size_t l = utf8_len_at(p, n);\n    if (l == 0) return 0;",
+         new="    size_t l = utf8_len_at(p, n);\n    if (l == 0) return 1;", run="unit"),
+    dict(name="THE FUZZER'S BUG RESURRECTED: invalid UTF-8 reaches MySQL and nothing catches the syntax error (503)",
+         edits=[("src/validate.c", "    size_t l = utf8_len_at(p, n);\n    if (l == 0) return 0;", "    size_t l = utf8_len_at(p, n);\n    if (l == 0) return 1;"),
+                ("src/h_catalog.c", "if (has_q && db_errno(c->db) == 1064)", "if (0 && has_q && db_errno(c->db) == 1064)")],
+         tests=["test_fuzz_http.Fuzz.test_invalid_utf8_in_any_string_input_is_a_client_error_never_a_5xx"]),
+    dict(name="INFORMATIONAL: cart read in random lock order (outcome VARIES run to run: ~100 deadlock retries; usually absorbed, sometimes a request exhausts its retries)",
          file="src/orders.c", old="ORDER BY ci.product_id FOR SHARE OF p", new="ORDER BY RAND() FOR SHARE OF p",
-         tests=[f"{CC}.test_cross_product_contention_has_no_failed_requests"], expect="survive"),
+         tests=[f"{CC}.test_cross_product_contention_has_no_failed_requests"], expect="either"),
 ]
 
 
@@ -82,12 +120,17 @@ def main():
             for d in ("src", "vendor", "tools", "tests", "db"):
                 shutil.copytree(os.path.join(ROOT, d), os.path.join(tmp, d), ignore=shutil.ignore_patterns("__pycache__"))
             shutil.copy(os.path.join(ROOT, "Makefile"), tmp)
-            path = os.path.join(tmp, m["file"])
-            src = open(path, encoding="utf-8").read()
-            if src.count(m["old"]) != 1:
-                results.append((m["name"], "BAD-MUTANT", f"pattern found {src.count(m['old'])}x"))
+            bad = None
+            for (fname, old, new) in m.get("edits") or [(m["file"], m["old"], m["new"])]:
+                path = os.path.join(tmp, fname)
+                src = open(path, encoding="utf-8").read()
+                if src.count(old) != 1:
+                    bad = f"{fname}: pattern found {src.count(old)}x"
+                    break
+                open(path, "w", encoding="utf-8").write(src.replace(old, new))
+            if bad:
+                results.append((m["name"], "BAD-MUTANT", bad))
                 continue
-            open(path, "w", encoding="utf-8").write(src.replace(m["old"], m["new"]))
             b = run(["make", "-s", "-j4"], tmp)
             if b.returncode:
                 results.append((m["name"], "BUILD-ERROR", b.stderr[-300:]))
@@ -99,10 +142,15 @@ def main():
                 t = run(["python3", "-W", "ignore", "-m", "unittest"] + m["tests"], os.path.join(tmp, "tests/integration"), env)
             killed = t.returncode != 0
             want_killed = m.get("expect", "kill") == "kill"
+            either = m.get("expect") == "either"
             verdict = "KILLED" if killed else "SURVIVED"
             extra = ""
-            if not want_killed:
+            if either:
+                extra = " (varies by design)"
+                want_killed = killed
+            elif not want_killed:
                 extra = " (expected)" if not killed else " (UNEXPECTED: failed)"
+            if either or not want_killed:
                 for ln in (t.stderr + t.stdout).splitlines():
                     if "deadlock retries" in ln:
                         extra += " " + ln.strip()

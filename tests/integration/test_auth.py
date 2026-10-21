@@ -147,6 +147,30 @@ class Auth(unittest.TestCase):
         self.assertIn("Path=/", ck)
         self.assertIn("Max-Age=", ck)
 
+    def test_defensive_headers_on_every_kind_of_response(self):
+        c = self.client()
+        for r in (c.get("/api/v1/products?limit=1"), c.get("/api/v1/nope"), c.get("/api/v1/auth/me"),
+                  c.post("/api/v1/auth/login", raw=b"{bad", csrf=False)):                # success, 404, 401, 400
+            self.assertEqual(r.headers["x-frame-options"], "DENY")
+            self.assertEqual(r.headers["referrer-policy"], "no-referrer")
+            self.assertEqual(r.headers["content-security-policy"], "default-src 'none'; frame-ancestors 'none'")
+            self.assertEqual(r.headers["x-content-type-options"], "nosniff")
+            self.assertEqual(r.headers["cache-control"], "no-store")
+            self.assertNotIn("server", r.headers)                                       # no version banner
+
+    def test_sessions_per_user_are_capped(self):
+        email, _ = register(self.client(), pw=PW)
+        uid = dbtools.scalar(f"SELECT id FROM users WHERE email='{email}'")
+        cookies = []
+        for _ in range(13):
+            c = self.client()
+            c.login((email, PW))
+            cookies.append(c)
+            time.sleep(0.005)                                                           # distinct created_at ticks
+        self.assertEqual(dbtools.scalar(f"SELECT COUNT(*) FROM sessions WHERE user_id={uid}"), "10")
+        self.assertEqual(cookies[0].get("/api/v1/auth/me").status, 401)                 # oldest were evicted
+        self.assertEqual(cookies[-1].get("/api/v1/auth/me").status, 200)                # newest still valid
+
     def test_session_token_is_hashed_at_rest_and_unique_per_login(self):
         c1, c2 = logged_in(self.srv, AVA), logged_in(self.srv, AVA)
         self.assertNotEqual(c1.cookie, c2.cookie)                              # fresh token each login

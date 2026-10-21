@@ -92,6 +92,19 @@ static void test_search(void) {
     CHECK(search_to_boolean("caf\xc3\xa9 latte", o, sizeof o) == 2);
     CHECK(search_to_boolean("' OR 1=1 --", o, sizeof o) == 0);                 /* nothing survives */
     CHECK(search_to_boolean("", o, sizeof o) == 0);
+
+    /* Strict UTF-8 (regression: invalid bytes used to become `+<garbage>*`, which MySQL rejects with errno 1064) */
+    CHECK(search_to_boolean("\xed\xa0\x80", o, sizeof o) == 0 && o[0] == 0);                 /* UTF-16 surrogate */
+    CHECK(search_to_boolean("\xf8\x88\x80\x80\x80", o, sizeof o) == 0);                       /* impossible 5-byte form */
+    CHECK(search_to_boolean("\xc0\xaf\xc0\xaf\xc0\xaf", o, sizeof o) == 0);                   /* overlong '/' */
+    CHECK(search_to_boolean("abc\xed\xa0\x80" "def", o, sizeof o) == 2 && strcmp(o, "+abc* +def*") == 0);
+    CHECK(search_to_boolean("abc\xff" "def\x80" "ghi", o, sizeof o) == 3);                    /* stray bytes split tokens */
+    CHECK(search_to_boolean("lamp\xe2\x82", o, sizeof o) == 1 && strcmp(o, "+lamp*") == 0);   /* truncated sequence dropped */
+    /* Tokens are counted in CHARACTERS, as InnoDB does (3 minimum), not bytes */
+    CHECK(search_to_boolean("\xe6\x97\xa5\xe6\x9c\xac", o, sizeof o) == 0);                   /* 2 characters (6 bytes) */
+    CHECK(search_to_boolean("\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e", o, sizeof o) == 1);       /* 3 characters */
+    CHECK(search_to_boolean("\xe2\x98\x85\xe2\x98\x85\xe2\x98\x85 lamp", o, sizeof o) == 2);  /* valid symbols are kept */
+    CHECK(search_to_boolean("\xd0\xba\xd0\xbb\xd0\xb0\xd0\xb2", o, sizeof o) == 1);           /* Cyrillic */
 }
 
 static void test_cursor_cookie_origin(void) {
