@@ -11,6 +11,17 @@ static atomic_ullong lat_sum_us, qwait_sum_us;
 static atomic_ullong lat_hist[METRICS_BUCKETS];
 static atomic_int    busy;
 static atomic_ullong c_events[MC_COUNT];
+static atomic_ullong c_dbq, c_dbus, c_dbslow, c_dbconn, c_dberr;
+
+void metrics_db_observe(uint64_t us, int slow) {
+    atomic_fetch_add_explicit(&c_dbq, 1, memory_order_relaxed);
+    atomic_fetch_add_explicit(&c_dbus, us, memory_order_relaxed);
+    if (slow) atomic_fetch_add_explicit(&c_dbslow, 1, memory_order_relaxed);
+}
+
+void metrics_db_event(db_event e) {
+    atomic_fetch_add_explicit(e == MDB_CONNECT ? &c_dbconn : &c_dberr, 1, memory_order_relaxed);
+}
 
 void metrics_checkout_event(checkout_event e) {
     if (e >= 0 && e < MC_COUNT) atomic_fetch_add_explicit(&c_events[e], 1, memory_order_relaxed);
@@ -46,6 +57,7 @@ size_t metrics_render(char *buf, size_t n, size_t qd, size_t hwm, size_t qcap, i
         "\"orders\":{\"created\":%llu,\"replayed\":%llu,\"idempotency_conflicts\":%llu,"
         "\"insufficient_stock\":%llu,\"deadlock_retries\":%llu,\"retries_exhausted\":%llu,"
         "\"paid\":%llu,\"payment_failed\":%llu,\"cancelled\":%llu,\"expired\":%llu},"
+        "\"db\":{\"statements\":%llu,\"time_us\":%llu,\"slow\":%llu,\"connects\":%llu,\"errors\":%llu},"
         "\"latency_us_sum\":%llu,\"queue_wait_us_sum\":%llu,"
         "\"latency_ms_hist\":{\"le\":[1,2,5,10,25,50,100,250,500,1000,\"+Inf\"],\"count\":[",
         GET(c_accepted), GET(c_rejected), GET(c_requests), GET(c_2xx), GET(c_3xx),
@@ -54,7 +66,8 @@ size_t metrics_render(char *buf, size_t n, size_t qd, size_t hwm, size_t qcap, i
         GET(c_events[MC_CREATED]), GET(c_events[MC_REPLAYED]), GET(c_events[MC_IDEM_CONFLICT]),
         GET(c_events[MC_INSUFFICIENT]), GET(c_events[MC_DEADLOCK_RETRY]), GET(c_events[MC_RETRY_EXHAUSTED]),
         GET(c_events[MC_PAID]), GET(c_events[MC_PAY_FAILED]), GET(c_events[MC_CANCELLED]),
-        GET(c_events[MC_EXPIRED]), GET(lat_sum_us), GET(qwait_sum_us));
+        GET(c_events[MC_EXPIRED]), GET(c_dbq), GET(c_dbus), GET(c_dbslow), GET(c_dbconn), GET(c_dberr),
+        GET(lat_sum_us), GET(qwait_sum_us));
     for (int i = 0; i < METRICS_BUCKETS && o > 0 && (size_t)o < n; i++)
         o += snprintf(buf + o, n - (size_t)o, "%s%llu", i ? "," : "", GET(lat_hist[i]));
     if (o > 0 && (size_t)o < n) o += snprintf(buf + o, n - (size_t)o, "]}}");

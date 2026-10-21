@@ -132,23 +132,58 @@ int qs_get(const char *qs, size_t qlen, const char *key, char *out, size_t outn)
     return 0;
 }
 
+/* Length of the VALID UTF-8 sequence starting at p (1-4), or 0 if p does not start one.
+ * Strict: rejects overlong forms, UTF-16 surrogates and code points above U+10FFFF. */
+static size_t utf8_len_at(const unsigned char *p, size_t n) {
+    if (p[0] < 0x80) return 1;
+    size_t need;
+    uint32_t cp;
+    if ((p[0] & 0xE0) == 0xC0) { need = 1; cp = p[0] & 0x1F; if (p[0] < 0xC2) return 0; }
+    else if ((p[0] & 0xF0) == 0xE0) { need = 2; cp = p[0] & 0x0F; }
+    else if ((p[0] & 0xF8) == 0xF0) { need = 3; cp = p[0] & 0x07; if (p[0] > 0xF4) return 0; }
+    else return 0;
+    if (n <= need) return 0;
+    for (size_t i = 1; i <= need; i++) {
+        if ((p[i] & 0xC0) != 0x80) return 0;
+        cp = (cp << 6) | (p[i] & 0x3F);
+    }
+    if (need == 2 && (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF))) return 0;
+    if (need == 3 && (cp < 0x10000 || cp > 0x10FFFF)) return 0;
+    return need + 1;
+}
+
+/* A word character is an ASCII letter/digit or any character of a VALID multi-byte sequence.
+ * Invalid bytes are separators: MySQL's FULLTEXT parser rejects `+<invalid bytes>*` with a
+ * syntax error (found by the HTTP fuzzer: it surfaced as a 503). Token length is counted in
+ * characters, matching InnoDB's minimum token size of 3 characters. */
+static size_t word_char_len(const unsigned char *p, size_t n) {
+    size_t l = utf8_len_at(p, n);
+    if (l == 0) return 0;
+    if (l == 1 && !isalnum(p[0])) return 0;
+    return l;
+}
+
 int search_to_boolean(const char *q, char *out, size_t outn) {
     int tokens = 0;
-    size_t o = 0;
+    size_t o = 0, n = strlen(q), i = 0;
     const unsigned char *p = (const unsigned char *)q;
     out[0] = 0;
-    while (*p && tokens < 6) {
-        while (*p && !(isalnum(*p) || *p >= 0x80)) p++;
-        const unsigned char *s = p;
-        while (*p && (isalnum(*p) || *p >= 0x80)) p++;
-        size_t l = (size_t)(p - s);
-        if (l < 3) continue;
-        if (l > 32) l = 32;
-        if (o + l + 5 >= outn) break;
+    while (i < n && tokens < 6) {
+        size_t l;
+        while (i < n && !(l = word_char_len(p + i, n - i))) i++;                 /* skip separators */
+        size_t start = i, cap_end = i;
+        int chars = 0;
+        while (i < n && (l = word_char_len(p + i, n - i))) {
+            i += l;
+            if (++chars <= 32) cap_end = i;                                      /* at most 32 characters per token */
+        }
+        if (chars < 3) continue;
+        size_t tl = cap_end - start;
+        if (o + tl + 5 >= outn) break;
         if (o) out[o++] = ' ';
         out[o++] = '+';
-        memcpy(out + o, s, l);
-        o += l;
+        memcpy(out + o, p + start, tl);
+        o += tl;
         out[o++] = '*';
         out[o] = 0;
         tokens++;

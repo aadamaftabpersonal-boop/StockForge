@@ -25,6 +25,11 @@ typedef enum {
 } checkout_event;
 void metrics_checkout_event(checkout_event e);
 
+/* Database layer: statement latency, slow statements, connects, errors. */
+typedef enum { MDB_CONNECT = 0, MDB_ERROR } db_event;
+void metrics_db_observe(uint64_t latency_us, int slow);
+void metrics_db_event(db_event e);
+
 void metrics_conn_accepted(void);
 void metrics_conn_rejected_overload(void);
 void metrics_worker_busy(int delta);

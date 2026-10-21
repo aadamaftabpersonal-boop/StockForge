@@ -138,7 +138,13 @@ int h_products(rctx *c) {
 #undef ADD
 
     db_rs *rs = db_query_p(c->db, sql, &p);
-    if (!rs) return api_err(c, 503, "DB_UNAVAILABLE", "Service temporarily unavailable.", NULL);
+    if (!rs) {
+        /* 1064: MySQL's full-text parser rejected the search expression. That is a problem with the
+         * client's text, not an outage, so say so (the tokenizer should make this unreachable). */
+        if (has_q && db_errno(c->db) == 1064)
+            return api_err(c, 422, "VALIDATION_FAILED", "Search text contains unsupported characters.", "q");
+        return api_err(c, 503, "DB_UNAVAILABLE", "Service temporarily unavailable.", NULL);
+    }
 
     cJSON *root = cJSON_CreateObject(), *arr = cJSON_AddArrayToObject(root, "items");
     prow row, last = {0};

@@ -165,34 +165,36 @@ static int apply_reservations(db *d, uint64_t oid, enum apply_mode mode) {
 
     for (int i = 0; i < n; i++) {
         uint64_t pid = L[i].pid, q = L[i].qty;
-        int64_t a, b, c;
+        int64_t rows;
+        /* Each statement is checked BEFORE the next one runs: after a database error nothing
+         * else may execute (see the `poisoned` guard in db.c for the second line of defence). */
+#define STEP(call) do { rows = (call); if (rows < 0) return APPLY_DBERR; if (rows != 1) return APPLY_INVARIANT; } while (0)
         switch (mode) {
         case AM_COMMIT:
-            a = db_exec(d, "UPDATE inventory SET on_hand = on_hand - ?, reserved = reserved - ? "
-                           "WHERE product_id = ? AND on_hand >= ? AND reserved >= ?", "uuuuu", q, q, pid, q, q);
-            b = db_exec(d, "UPDATE stock_reservations SET status = 'committed' "
-                           "WHERE order_id = ? AND product_id = ? AND status = 'held'", "uu", oid, pid);
-            c = db_exec(d, "INSERT INTO inventory_ledger (product_id, delta_on_hand, delta_reserved, reason, order_id) "
-                           "VALUES (?, ?, ?, 'commit', ?)", "uiiu", pid, -(int64_t)q, -(int64_t)q, oid);
+            STEP(db_exec(d, "UPDATE inventory SET on_hand = on_hand - ?, reserved = reserved - ? "
+                            "WHERE product_id = ? AND on_hand >= ? AND reserved >= ?", "uuuuu", q, q, pid, q, q));
+            STEP(db_exec(d, "UPDATE stock_reservations SET status = 'committed' "
+                            "WHERE order_id = ? AND product_id = ? AND status = 'held'", "uu", oid, pid));
+            STEP(db_exec(d, "INSERT INTO inventory_ledger (product_id, delta_on_hand, delta_reserved, reason, order_id) "
+                            "VALUES (?, ?, ?, 'commit', ?)", "uiiu", pid, -(int64_t)q, -(int64_t)q, oid));
             break;
         case AM_RELEASE:
-            a = db_exec(d, "UPDATE inventory SET reserved = reserved - ? "
-                           "WHERE product_id = ? AND reserved >= ?", "uuu", q, pid, q);
-            b = db_exec(d, "UPDATE stock_reservations SET status = 'released' "
-                           "WHERE order_id = ? AND product_id = ? AND status = 'held'", "uu", oid, pid);
-            c = db_exec(d, "INSERT INTO inventory_ledger (product_id, delta_on_hand, delta_reserved, reason, order_id) "
-                           "VALUES (?, 0, ?, 'release', ?)", "uiu", pid, -(int64_t)q, oid);
+            STEP(db_exec(d, "UPDATE inventory SET reserved = reserved - ? "
+                            "WHERE product_id = ? AND reserved >= ?", "uuu", q, pid, q));
+            STEP(db_exec(d, "UPDATE stock_reservations SET status = 'released' "
+                            "WHERE order_id = ? AND product_id = ? AND status = 'held'", "uu", oid, pid));
+            STEP(db_exec(d, "INSERT INTO inventory_ledger (product_id, delta_on_hand, delta_reserved, reason, order_id) "
+                            "VALUES (?, 0, ?, 'release', ?)", "uiu", pid, -(int64_t)q, oid));
             break;
         default: /* AM_RESTOCK */
-            a = db_exec(d, "UPDATE inventory SET on_hand = on_hand + ? WHERE product_id = ?", "uu", q, pid);
-            b = db_exec(d, "UPDATE stock_reservations SET status = 'released' "
-                           "WHERE order_id = ? AND product_id = ? AND status = 'committed'", "uu", oid, pid);
-            c = db_exec(d, "INSERT INTO inventory_ledger (product_id, delta_on_hand, delta_reserved, reason, order_id) "
-                           "VALUES (?, ?, 0, 'restock', ?)", "uiu", pid, (int64_t)q, oid);
+            STEP(db_exec(d, "UPDATE inventory SET on_hand = on_hand + ? WHERE product_id = ?", "uu", q, pid));
+            STEP(db_exec(d, "UPDATE stock_reservations SET status = 'released' "
+                            "WHERE order_id = ? AND product_id = ? AND status = 'committed'", "uu", oid, pid));
+            STEP(db_exec(d, "INSERT INTO inventory_ledger (product_id, delta_on_hand, delta_reserved, reason, order_id) "
+                            "VALUES (?, ?, 0, 'restock', ?)", "uiu", pid, (int64_t)q, oid));
             break;
         }
-        if (a < 0 || b < 0 || c < 0) return APPLY_DBERR;
-        if (a != 1 || b != 1 || c != 1) return APPLY_INVARIANT;
+#undef STEP
     }
     return APPLY_OK;
 }

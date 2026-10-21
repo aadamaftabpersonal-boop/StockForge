@@ -200,10 +200,15 @@ static int write_all(int fd, struct iovec *iov, int cnt) {
 
 int http_send(int fd, int status, const char *ctype, const char *body, size_t len,
               const char *rid, const char *extra) {
-    char head[1024];
+    char head[1536];
+    /* API responses are data, never documents: forbid framing, sniffing, referrer
+     * leaks and any active content if a response were ever rendered by a browser.
+     * (HSTS is set by Apache, the TLS boundary.) */
     int n = snprintf(head, sizeof head,
         "HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %zu\r\n"
         "X-Request-Id: %s\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-store\r\n"
+        "X-Frame-Options: DENY\r\nReferrer-Policy: no-referrer\r\n"
+        "Content-Security-Policy: default-src 'none'; frame-ancestors 'none'\r\n"
         "Connection: close\r\n%s\r\n",
         status, reason(status), ctype, len, rid, extra ? extra : "");
     if (n < 0 || (size_t)n >= sizeof head) return -1;

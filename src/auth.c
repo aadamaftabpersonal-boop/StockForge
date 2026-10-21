@@ -61,7 +61,15 @@ int auth_new_session(db *d, uint64_t uid, int ttl, char *token, size_t tn, char 
         "INSERT INTO sessions (token_hash, user_id, csrf_token, expires_at) "
         "VALUES (?, ?, ?, NOW(3) + INTERVAL ? SECOND)",
         "Bus" "i", h, sizeof h, uid, csrf, (int64_t)ttl);
-    return r == 1 ? 0 : -1;
+    if (r != 1) return -1;
+    /* Bound the table: keep the 10 newest sessions per user. The 10th-newest
+     * created_at is the cut-off; with fewer than 10 sessions the sub-select is
+     * NULL and nothing is deleted. */
+    db_exec(d,
+        "DELETE FROM sessions WHERE user_id = ? AND created_at < "
+        "(SELECT c FROM (SELECT created_at c FROM sessions WHERE user_id = ? "
+        " ORDER BY created_at DESC LIMIT 1 OFFSET 9) t)", "uu", uid, uid);
+    return 0;
 }
 
 int auth_load_session(db *d, const http_req *r, auth_user *out) {

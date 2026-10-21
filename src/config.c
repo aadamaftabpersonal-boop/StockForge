@@ -48,6 +48,8 @@ int config_load(config *cfg, char *err, size_t errn) {
     LONG(cfg->debug, "SF_DEBUG", 0, 0, 1);
 
     LONG(cfg->db_port, "SF_DB_PORT", 3306, 1, 65535);
+    LONG(cfg->db_timeout_s, "SF_DB_TIMEOUT_S", 15, 1, 300);
+    LONG(cfg->slow_query_ms, "SF_SLOW_QUERY_MS", 250, 1, 60000);
     LONG(cfg->cookie_secure, "SF_COOKIE_SECURE", 1, 0, 1);
     LONG(cfg->session_ttl_s, "SF_SESSION_TTL_S", 86400, 60, 2592000);
     LONG(cfg->trust_proxy, "SF_TRUST_PROXY", 0, 0, 1);

@@ -20,6 +20,8 @@ typedef struct {
     char   db_user[64];
     char   db_password[128];
     char   db_name[64];
+    int    db_timeout_s;          /* read/write timeout on the MySQL socket */
+    int    slow_query_ms;         /* statements slower than this are logged and counted */
 
     /* web security */
     int    cookie_secure;         /* Secure flag on session cookie (needs HTTPS in front) */

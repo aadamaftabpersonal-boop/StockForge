@@ -43,7 +43,7 @@ int h_metrics(rctx *c) {
         allowed = s == 1 && c->user.is_admin;
     }
     if (!allowed) return api_err(c, 401, "UNAUTHENTICATED", "Credentials required.", NULL);
-    char b[3072];
+    char b[4096];
     size_t n = metrics_render(b, sizeof b, fdq_depth(c->queue), fdq_high_water(c->queue),
                               (size_t)c->cfg->queue_cap, c->cfg->workers);
     http_send(c->fd, 200, "application/json", b, n, c->rid, NULL);

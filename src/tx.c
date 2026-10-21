@@ -18,6 +18,7 @@ int tx_run(db *d, tx_body fn, void *arg) {
     int rc = TX_RETRY;
     for (int attempt = 1; attempt <= TX_MAX_ATTEMPTS; attempt++) {
         rc = fn(d, arg);
+        db_rollback(d);                 /* no-op after a commit; closes anything a body left open */
         if (rc != TX_RETRY) return rc;
         metrics_checkout_event(MC_DEADLOCK_RETRY);
         /* Jittered exponential backoff so the victims do not collide again in lockstep. */

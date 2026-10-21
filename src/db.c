@@ -7,6 +7,8 @@
 #include <string.h>
 
 #include "log.h"
+#include "metrics.h"
+#include "util.h"
 
 #define MAX_PARAMS 24
 #define MAX_COLS 24
@@ -14,6 +16,7 @@
 struct db {
     MYSQL   *my;
     int      in_tx;
+    int      poisoned;    /* the connection died INSIDE a transaction: nothing may run until db_rollback() */
     unsigned last_errno;
     uint64_t insert_id;
     int64_t  affected;
@@ -41,9 +44,13 @@ int db_global_init(const config *cfg) {
 
 void db_thread_init(void) { mysql_thread_init(); }
 
+/* A dropped connection implicitly rolls back its transaction on the server. If we
+ * were inside one, remember that: a later statement must NOT silently reconnect and
+ * run as autocommit, or half of a transaction would commit outside it. */
 static void drop_conn(db *d) {
     if (d->my) { mysql_close(d->my); d->my = NULL; }
-    d->in_tx = 0;     /* a dropped connection implicitly rolled back */
+    if (d->in_tx) d->poisoned = 1;
+    d->in_tx = 0;
 }
 
 void db_thread_end(void) {
@@ -53,6 +60,7 @@ void db_thread_end(void) {
 
 static void note_error(db *d, const char *where) {
     d->last_errno = d->my ? mysql_errno(d->my) : 0;
+    metrics_db_event(MDB_ERROR);
     char m[256];
     snprintf(m, sizeof m, "%s: errno=%u %s", where, d->last_errno, d->my ? mysql_error(d->my) : "no connection");
     /* deadlock (1213) and lock-wait timeout (1205) are expected under contention and are retried */
@@ -66,7 +74,8 @@ static int is_conn_error(unsigned e) {
 static int connect_db(db *d) {
     d->my = mysql_init(NULL);
     if (!d->my) return -1;
-    unsigned ct = 3, rt = 15, wt = 15;
+    unsigned ct = 3, rt = (unsigned)g_cfg->db_timeout_s, wt = (unsigned)g_cfg->db_timeout_s;
+    metrics_db_event(MDB_CONNECT);
     mysql_options(d->my, MYSQL_OPT_CONNECT_TIMEOUT, &ct);
     mysql_options(d->my, MYSQL_OPT_READ_TIMEOUT, &rt);
     mysql_options(d->my, MYSQL_OPT_WRITE_TIMEOUT, &wt);
@@ -95,15 +104,31 @@ db *db_get(void) {
 }
 
 int db_ping(db *d) {
-    if (!d->my && connect_db(d) != 0) return -1;
-    if (mysql_query(d->my, "SELECT 1")) {
+    for (int attempt = 0; attempt < 2; attempt++) {
+        if (!d->my && connect_db(d) != 0) return -1;
+        if (!mysql_query(d->my, "SELECT 1")) {
+            MYSQL_RES *r = mysql_store_result(d->my);
+            if (r) mysql_free_result(r);
+            return 0;
+        }
         note_error(d, "ping");
-        if (is_conn_error(d->last_errno)) drop_conn(d);
-        return -1;
+        if (!is_conn_error(d->last_errno)) return -1;
+        drop_conn(d);               /* stale connection (e.g. server restarted): reconnect once */
     }
-    MYSQL_RES *r = mysql_store_result(d->my);
-    if (r) mysql_free_result(r);
-    return 0;
+    return -1;
+}
+
+/* Records latency of one statement; logs it if slower than SF_SLOW_QUERY_MS.
+ * Only the SQL TEMPLATE is logged (placeholders, never bound values). */
+static void observe(const char *sql, uint64_t t0_ns) {
+    uint64_t us = (now_ns() - t0_ns) / 1000;
+    int slow = us >= (uint64_t)g_cfg->slow_query_ms * 1000u;
+    metrics_db_observe(us, slow);
+    if (slow) {
+        char m[256];
+        snprintf(m, sizeof m, "ms=%llu sql=%.180s", (unsigned long long)(us / 1000), sql);
+        log_msg("warn", "slow_query", m);
+    }
 }
 
 /* ------------------------------------------------------------ statements */
@@ -127,7 +152,14 @@ static int collect(const char *pfmt, va_list ap, param *out) {
 }
 
 /* Prepares and executes. On success returns the live statement. */
+static __thread uint64_t tl_t0;          /* start of the statement currently being timed */
+
 static MYSQL_STMT *run(db *d, const char *sql, const param *p, int np) {
+    tl_t0 = now_ns();
+    if (d->poisoned) {                       /* the transaction is gone; refuse to continue it elsewhere */
+        d->last_errno = 2013;
+        return NULL;
+    }
     for (int attempt = 0; attempt < 2; attempt++) {
         if (!d->my && connect_db(d) != 0) return NULL;
         MYSQL_STMT *st = mysql_stmt_init(d->my);
@@ -193,10 +225,11 @@ int64_t db_exec(db *d, const char *sql, const char *pfmt, ...) {
     MYSQL_STMT *st = run(d, sql, p, np);
     if (!st) return -1;
     mysql_stmt_close(st);
+    observe(sql, tl_t0);
     return d->affected;
 }
 
-static db_rs *finish_query(db *d, MYSQL_STMT *st);
+static db_rs *finish_query(db *d, const char *sql, MYSQL_STMT *st);
 
 db_rs *db_query(db *d, const char *sql, const char *pfmt, ...) {
     param p[MAX_PARAMS];
@@ -205,14 +238,14 @@ db_rs *db_query(db *d, const char *sql, const char *pfmt, ...) {
     int np = collect(pfmt, ap, p);
     va_end(ap);
     if (np < 0) return NULL;
-    return finish_query(d, run(d, sql, p, np));
+    return finish_query(d, sql, run(d, sql, p, np));
 }
 
 db_rs *db_query_p(db *d, const char *sql, const db_params *p) {
-    return finish_query(d, run(d, sql, p->p, p->n));
+    return finish_query(d, sql, run(d, sql, p->p, p->n));
 }
 
-static db_rs *finish_query(db *d, MYSQL_STMT *st) {
+static db_rs *finish_query(db *d, const char *sql, MYSQL_STMT *st) {
     if (!st) return NULL;
     if (mysql_stmt_store_result(st)) {
         note_error(d, "store_result");
@@ -220,6 +253,7 @@ static db_rs *finish_query(db *d, MYSQL_STMT *st) {
         mysql_stmt_close(st);
         return NULL;
     }
+    observe(sql, tl_t0);
     db_rs *rs = malloc(sizeof *rs);
     if (!rs) { mysql_stmt_close(st); return NULL; }
     rs->st = st;
@@ -284,17 +318,24 @@ unsigned db_errno(db *d) { return d->last_errno; }
 int db_is_dup(db *d) { return d->last_errno == 1062; }
 
 int db_begin(db *d) {
-    if (!d->my && connect_db(d) != 0) return -1;
-    if (mysql_query(d->my, "START TRANSACTION")) {
+    d->poisoned = 0;                         /* a new transaction starts clean */
+    for (int attempt = 0; attempt < 2; attempt++) {
+        if (!d->my && connect_db(d) != 0) return -1;
+        if (!mysql_query(d->my, "START TRANSACTION")) { d->in_tx = 1; return 0; }
         note_error(d, "begin");
-        if (is_conn_error(d->last_errno)) drop_conn(d);
-        return -1;
+        if (!is_conn_error(d->last_errno)) return -1;
+        drop_conn(d);               /* nothing has run yet, so reconnecting once is always safe */
     }
-    d->in_tx = 1;
-    return 0;
+    return -1;
 }
 
 int db_commit(db *d) {
+    if (d->poisoned) {                       /* never report success for a transaction that was lost */
+        d->last_errno = 2013;
+        d->in_tx = 0;
+        d->poisoned = 0;
+        return -1;
+    }
     int rc = (d->my && mysql_commit(d->my)) ? -1 : 0;
     if (rc) {
         note_error(d, "commit");
@@ -307,4 +348,5 @@ int db_commit(db *d) {
 void db_rollback(db *d) {
     if (d->my && d->in_tx) mysql_rollback(d->my);
     d->in_tx = 0;
+    d->poisoned = 0;                         /* the lost transaction has now been acknowledged */
 }
