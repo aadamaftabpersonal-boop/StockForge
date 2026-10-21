@@ -1,0 +1,139 @@
+{
+ "experiment": "concurrency",
+ "label": "c064",
+ "server_env": {
+  "SF_WORKERS": 8,
+  "SF_QUEUE_CAP": 64
+ },
+ "threads": 64,
+ "scenario": "browse",
+ "loadgen": {
+  "scenario": "browse",
+  "threads": 64,
+  "duration_s": 8,
+  "warmup_s": 2,
+  "requests": 13462,
+  "requests_per_s": 1682.8,
+  "latency_ms": {
+   "mean": 38.001,
+   "p50": 33.287,
+   "p95": 77.753,
+   "p99": 104.175,
+   "max": 134.063
+  },
+  "connect_failures": 0,
+  "timeouts": 0,
+  "bad_responses": 0,
+  "purchase_cycles": {
+   "attempted": 0,
+   "completed": 0,
+   "per_s": 0.0
+  },
+  "status_counts": {
+   "200": 13462
+  },
+  "by_operation": {
+   "list_newest": {
+    "count": 5375,
+    "mean": 34.141,
+    "p50": 31.141,
+    "p95": 61.608,
+    "p99": 69.547,
+    "max": 81.434
+   },
+   "list_category": {
+    "count": 1976,
+    "mean": 34.778,
+    "p50": 32.258,
+    "p95": 60.905,
+    "p99": 67.957,
+    "max": 81.53
+   },
+   "search_common_word": {
+    "count": 969,
+    "mean": 86.759,
+    "p50": 84.154,
+    "p95": 113.359,
+    "p99": 122.046,
+    "max": 134.063
+   },
+   "search_rare_token": {
+    "count": 1091,
+    "mean": 34.06,
+    "p50": 31.397,
+    "p95": 60.136,
+    "p99": 67.968,
+    "max": 76.824
+   },
+   "detail": {
+    "count": 2723,
+    "mean": 33.699,
+    "p50": 31.017,
+    "p95": 60.086,
+    "p99": 67.868,
+    "max": 81.13
+   },
+   "list_price_sorted": {
+    "count": 1328,
+    "mean": 34.908,
+    "p50": 32.671,
+    "p95": 60.7,
+    "p99": 71.472,
+    "max": 77.989
+   }
+  }
+ },
+ "server": {
+  "avg_cpu_cores": 0.6,
+  "max_rss_mb": 9.0
+ },
+ "server_metrics_delta": {
+  "connections_accepted": 16702,
+  "connections_rejected_overload": 0,
+  "requests_total": 16702,
+  "responses": {
+   "2xx": 16702,
+   "3xx": 0,
+   "4xx": 0,
+   "5xx": 0
+  },
+  "workers": {
+   "total": 0,
+   "busy": 0
+  },
+  "queue": {
+   "depth": 0,
+   "high_water": 56,
+   "capacity": 0
+  },
+  "orders": {
+   "created": 0,
+   "replayed": 0,
+   "idempotency_conflicts": 0,
+   "insufficient_stock": 0,
+   "deadlock_retries": 0,
+   "retries_exhausted": 0,
+   "paid": 0,
+   "payment_failed": 0,
+   "cancelled": 0,
+   "expired": 0
+  },
+  "db": {
+   "statements": 16703,
+   "time_us": 76903336,
+   "slow": 0,
+   "connects": 0,
+   "errors": 0
+  },
+  "latency_us_sum": 79817514,
+  "queue_wait_us_sum": 557112674,
+  "latency_ms_hist": {}
+ },
+ "queue_high_water": 57,
+ "innodb_delta": {
+  "Innodb_buffer_pool_read_requests": 78486565,
+  "Innodb_buffer_pool_reads": 0,
+  "Innodb_row_lock_time": 0,
+  "Innodb_row_lock_waits": 0
+ }
+}

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" role="img" aria-label="Search for two words: FULLTEXT vs LIKE &#x27;%word%&#x27;" font-family="system-ui, sans-serif" font-size="12">
+<title>Search for two words: FULLTEXT vs LIKE &#x27;%word%&#x27;</title><rect width="720" height="400" fill="#fff"/>
+<text x="360.0" y="24" text-anchor="middle" font-size="15" font-weight="600" fill="#111">Search for two words: FULLTEXT vs LIKE &#x27;%word%&#x27;</text>
+<line x1="70" y1="308.0" x2="696" y2="308.0" stroke="#e5e7eb"/>
+<text x="62" y="312.0" text-anchor="end" fill="#374151">0.00</text>
+<line x1="70" y1="255.6" x2="696" y2="255.6" stroke="#e5e7eb"/>
+<text x="62" y="259.6" text-anchor="end" fill="#374151">2.50</text>
+<line x1="70" y1="203.2" x2="696" y2="203.2" stroke="#e5e7eb"/>
+<text x="62" y="207.2" text-anchor="end" fill="#374151">5.00</text>
+<line x1="70" y1="150.8" x2="696" y2="150.8" stroke="#e5e7eb"/>
+<text x="62" y="154.8" text-anchor="end" fill="#374151">7.50</text>
+<line x1="70" y1="98.4" x2="696" y2="98.4" stroke="#e5e7eb"/>
+<text x="62" y="102.4" text-anchor="end" fill="#374151">10.0</text>
+<line x1="70" y1="46.0" x2="696" y2="46.0" stroke="#e5e7eb"/>
+<text x="62" y="50.0" text-anchor="end" fill="#374151">12.5</text>
+<text transform="translate(16 177.0) rotate(-90)" text-anchor="middle" fill="#374151">average ms per query</text>
+<text x="174.3" y="326" text-anchor="middle" fill="#374151">FULLTEXT MATCH …</text>
+<text x="383.0" y="326" text-anchor="middle" fill="#374151">LIKE &#x27;%wireless…</text>
+<text x="591.7" y="326" text-anchor="middle" fill="#374151">FULLTEXT ordere…</text>
+<rect x="107.6" y="80.2" width="133.5" height="227.8" fill="#2563eb"><title>FULLTEXT MATCH ... IN BOOLEAN MODE: 10.9</title></rect>
+<text x="174.3" y="74.2" text-anchor="middle" font-size="11" fill="#111">10.9</text>
+<rect x="316.2" y="288.4" width="133.5" height="19.6" fill="#d97706"><title>LIKE &#x27;%wireless%&#x27; AND LIKE &#x27;%keyboard%&#x27;: 0.93</title></rect>
+<text x="383.0" y="282.4" text-anchor="middle" font-size="11" fill="#111">0.93</text>
+<rect x="524.9" y="144.3" width="133.5" height="163.7" fill="#2563eb"><title>FULLTEXT ordered by relevance, not id (no keyset): 7.81</title></rect>
+<text x="591.7" y="138.3" text-anchor="middle" font-size="11" fill="#111">7.81</text>
+</svg>

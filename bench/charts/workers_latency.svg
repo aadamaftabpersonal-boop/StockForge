@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" role="img" aria-label="Latency vs worker threads (browse mix, 64 clients)" font-family="system-ui, sans-serif" font-size="12">
+<title>Latency vs worker threads (browse mix, 64 clients)</title><rect width="720" height="400" fill="#fff"/>
+<text x="360.0" y="24" text-anchor="middle" font-size="15" font-weight="600" fill="#111">Latency vs worker threads (browse mix, 64 clients)</text>
+<line x1="70" y1="308.0" x2="696" y2="308.0" stroke="#e5e7eb"/>
+<text x="62" y="312.0" text-anchor="end" fill="#374151">0.00</text>
+<line x1="70" y1="255.6" x2="696" y2="255.6" stroke="#e5e7eb"/>
+<text x="62" y="259.6" text-anchor="end" fill="#374151">63.4</text>
+<line x1="70" y1="203.2" x2="696" y2="203.2" stroke="#e5e7eb"/>
+<text x="62" y="207.2" text-anchor="end" fill="#374151">127</text>
+<line x1="70" y1="150.8" x2="696" y2="150.8" stroke="#e5e7eb"/>
+<text x="62" y="154.8" text-anchor="end" fill="#374151">190</text>
+<line x1="70" y1="98.4" x2="696" y2="98.4" stroke="#e5e7eb"/>
+<text x="62" y="102.4" text-anchor="end" fill="#374151">254</text>
+<line x1="70" y1="46.0" x2="696" y2="46.0" stroke="#e5e7eb"/>
+<text x="62" y="50.0" text-anchor="end" fill="#374151">317</text>
+<text transform="translate(16 177.0) rotate(-90)" text-anchor="middle" fill="#374151">milliseconds</text>
+<text x="122.2" y="326" text-anchor="middle" fill="#374151">1</text>
+<text x="226.5" y="326" text-anchor="middle" fill="#374151">2</text>
+<text x="330.8" y="326" text-anchor="middle" fill="#374151">4</text>
+<text x="435.2" y="326" text-anchor="middle" fill="#374151">8</text>
+<text x="539.5" y="326" text-anchor="middle" fill="#374151">16</text>
+<text x="643.8" y="326" text-anchor="middle" fill="#374151">32</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="122.2,200.2 226.5,250.4 330.8,269.3 435.2,279.4 539.5,289.6 643.8,296.7"/>
+<circle cx="122.2" cy="200.2" r="4" fill="#2563eb"><title>p50: 130</title></circle>
+<text x="122.2" y="191.2" text-anchor="middle" font-size="11" fill="#2563eb">130</text>
+<circle cx="226.5" cy="250.4" r="4" fill="#2563eb"><title>p50: 69.7</title></circle>
+<text x="226.5" y="241.4" text-anchor="middle" font-size="11" fill="#2563eb">69.7</text>
+<circle cx="330.8" cy="269.3" r="4" fill="#2563eb"><title>p50: 46.9</title></circle>
+<text x="330.8" y="260.3" text-anchor="middle" font-size="11" fill="#2563eb">46.9</text>
+<circle cx="435.2" cy="279.4" r="4" fill="#2563eb"><title>p50: 34.6</title></circle>
+<text x="435.2" y="270.4" text-anchor="middle" font-size="11" fill="#2563eb">34.6</text>
+<circle cx="539.5" cy="289.6" r="4" fill="#2563eb"><title>p50: 22.2</title></circle>
+<text x="539.5" y="280.6" text-anchor="middle" font-size="11" fill="#2563eb">22.2</text>
+<circle cx="643.8" cy="296.7" r="4" fill="#2563eb"><title>p50: 13.6</title></circle>
+<text x="643.8" y="287.7" text-anchor="middle" font-size="11" fill="#2563eb">13.6</text>
+<rect x="78" y="376" width="12" height="12" fill="#2563eb"/><text x="96" y="386" fill="#111">p50</text>
+<polyline fill="none" stroke="#d97706" stroke-width="2.5" points="122.2,87.1 226.5,186.2 330.8,220.1 435.2,214.1 539.5,189.0 643.8,69.8"/>
+<circle cx="122.2" cy="87.1" r="4" fill="#d97706"><title>p99: 267</title></circle>
+<text x="122.2" y="78.1" text-anchor="middle" font-size="11" fill="#d97706">267</text>
+<circle cx="226.5" cy="186.2" r="4" fill="#d97706"><title>p99: 147</title></circle>
+<text x="226.5" y="177.2" text-anchor="middle" font-size="11" fill="#d97706">147</text>
+<circle cx="330.8" cy="220.1" r="4" fill="#d97706"><title>p99: 106</title></circle>
+<text x="330.8" y="211.1" text-anchor="middle" font-size="11" fill="#d97706">106</text>
+<circle cx="435.2" cy="214.1" r="4" fill="#d97706"><title>p99: 114</title></circle>
+<text x="435.2" y="205.1" text-anchor="middle" font-size="11" fill="#d97706">114</text>
+<circle cx="539.5" cy="189.0" r="4" fill="#d97706"><title>p99: 144</title></circle>
+<text x="539.5" y="180.0" text-anchor="middle" font-size="11" fill="#d97706">144</text>
+<circle cx="643.8" cy="69.8" r="4" fill="#d97706"><title>p99: 288</title></circle>
+<text x="643.8" y="60.8" text-anchor="middle" font-size="11" fill="#d97706">288</text>
+<rect x="268" y="376" width="12" height="12" fill="#d97706"/><text x="286" y="386" fill="#111">p99</text>
+<text x="383.0" y="354" text-anchor="middle" fill="#374151">SF_WORKERS</text>
+</svg>

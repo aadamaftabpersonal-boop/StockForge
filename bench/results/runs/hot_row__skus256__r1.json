@@ -1,0 +1,124 @@
+{
+ "experiment": "hot_row",
+ "label": "skus256",
+ "server_env": {
+  "SF_WORKERS": 16,
+  "SF_QUEUE_CAP": 256
+ },
+ "threads": 32,
+ "scenario": "buy",
+ "loadgen": {
+  "scenario": "buy",
+  "threads": 32,
+  "duration_s": 8,
+  "warmup_s": 2,
+  "requests": 5371,
+  "requests_per_s": 671.4,
+  "latency_ms": {
+   "mean": 48.127,
+   "p50": 46.34,
+   "p95": 68.994,
+   "p99": 84.665,
+   "max": 128.232
+  },
+  "connect_failures": 0,
+  "timeouts": 0,
+  "bad_responses": 0,
+  "purchase_cycles": {
+   "attempted": 1336,
+   "completed": 1336,
+   "per_s": 167.0
+  },
+  "status_counts": {
+   "200": 4030,
+   "201": 1341
+  },
+  "by_operation": {
+   "cart_put": {
+    "count": 1336,
+    "mean": 44.467,
+    "p50": 43.07,
+    "p95": 63.277,
+    "p99": 75.143,
+    "max": 98.44
+   },
+   "checkout": {
+    "count": 1341,
+    "mean": 49.915,
+    "p50": 47.537,
+    "p95": 72.162,
+    "p99": 89.352,
+    "max": 122.468
+   },
+   "pay": {
+    "count": 1345,
+    "mean": 49.215,
+    "p50": 47.009,
+    "p95": 69.779,
+    "p99": 81.347,
+    "max": 128.232
+   },
+   "cancel": {
+    "count": 1349,
+    "mean": 48.89,
+    "p50": 46.917,
+    "p95": 69.985,
+    "p99": 95.98,
+    "max": 114.049
+   }
+  }
+ },
+ "server": {
+  "avg_cpu_cores": 0.73,
+  "max_rss_mb": 9.7
+ },
+ "server_metrics_delta": {
+  "connections_accepted": 6789,
+  "connections_rejected_overload": 0,
+  "requests_total": 6789,
+  "responses": {
+   "2xx": 6789,
+   "3xx": 0,
+   "4xx": 0,
+   "5xx": 0
+  },
+  "workers": {
+   "total": 0,
+   "busy": 0
+  },
+  "queue": {
+   "depth": 0,
+   "high_water": 16,
+   "capacity": 0
+  },
+  "orders": {
+   "created": 1697,
+   "replayed": 0,
+   "idempotency_conflicts": 0,
+   "insufficient_stock": 0,
+   "deadlock_retries": 0,
+   "retries_exhausted": 0,
+   "paid": 1697,
+   "payment_failed": 0,
+   "cancelled": 1697,
+   "expired": 0
+  },
+  "db": {
+   "statements": 74670,
+   "time_us": 57059825,
+   "slow": 0,
+   "connects": 0,
+   "errors": 0
+  },
+  "latency_us_sum": 162049069,
+  "queue_wait_us_sum": 160051280,
+  "latency_ms_hist": {}
+ },
+ "queue_high_water": 17,
+ "innodb_delta": {
+  "Innodb_buffer_pool_read_requests": 873208,
+  "Innodb_buffer_pool_reads": 0,
+  "Innodb_row_lock_time": 1737,
+  "Innodb_row_lock_waits": 131
+ }
+}

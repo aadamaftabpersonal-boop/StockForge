@@ -1,0 +1,30 @@
+{
+ "scenario": "buy",
+ "hot_skus": 1,
+ "client_threads": 32,
+ "server_workers": 16,
+ "samples_taken": 20,
+ "gdb_failures": 0,
+ "thread_states": {
+  "waiting on MySQL (network round trip)": {
+   "samples": 319,
+   "percent_of_all_thread_observations": 83.9
+  },
+  "signal thread": {
+   "samples": 20,
+   "percent_of_all_thread_observations": 5.3
+  },
+  "sweeper (sleeping between sweeps)": {
+   "samples": 20,
+   "percent_of_all_thread_observations": 5.3
+  },
+  "acceptor": {
+   "samples": 20,
+   "percent_of_all_thread_observations": 5.3
+  },
+  "other (top frame: __libc_send)": {
+   "samples": 1,
+   "percent_of_all_thread_observations": 0.3
+  }
+ }
+}

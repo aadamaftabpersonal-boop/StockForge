@@ -1,0 +1,14 @@
+{
+  "scenario": "buy", "threads": 32, "duration_s": 8, "warmup_s": 2,
+  "requests": 4903, "requests_per_s": 612.9,
+  "latency_ms": {"mean": 52.627, "p50": 49.162, "p95": 76.544, "p99": 107.391, "max": 310.902},
+  "connect_failures": 0, "timeouts": 0, "bad_responses": 0,
+  "purchase_cycles": {"attempted": 1209, "completed": 1209, "per_s": 151.1},
+  "status_counts": {"200": 3686, "201": 1217},
+  "by_operation": {
+    "cart_put": {"count": 1209, "mean": 47.831, "p50": 44.529, "p95": 64.639, "p99": 107.603, "max": 274.612},
+    "checkout": {"count": 1217, "mean": 55.149, "p50": 51.730, "p95": 82.371, "p99": 105.180, "max": 310.902},
+    "pay": {"count": 1236, "mean": 54.128, "p50": 51.174, "p95": 78.299, "p99": 99.826, "max": 295.659},
+    "cancel": {"count": 1241, "mean": 53.329, "p50": 49.932, "p95": 78.735, "p99": 107.663, "max": 306.658}
+  }
+}

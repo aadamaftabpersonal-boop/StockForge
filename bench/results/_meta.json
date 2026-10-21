@@ -1,0 +1,28 @@
+{
+ "hardware": {
+  "cpu_model": "13th Gen Intel(R) Core(TM) i7-13650HX",
+  "logical_cpus": 20,
+  "memory_gb_total": 11.5,
+  "kernel": "6.18.33.2-microsoft-standard-WSL2",
+  "os": "Ubuntu 24.04.5 LTS",
+  "environment": "Docker Desktop (WSL2) on Windows 11; app, load generator and MySQL share this machine",
+  "mysql_version": "8.4.11",
+  "innodb_buffer_pool_bytes": 1073741824,
+  "innodb_flush_log_at_trx_commit": "1",
+  "mysql_max_connections": "151",
+  "innodb_lock_wait_timeout_s": "50",
+  "compiler": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+ },
+ "dataset": {
+  "products": 100048,
+  "categories": 6,
+  "units_per_bench_product": 1000000
+ },
+ "method": {
+  "duration_s": 8,
+  "warmup_s": 2,
+  "repeats": 3,
+  "loadgen": "closed-loop, one connection per request (server uses Connection: close)",
+  "note": "each case run 3x with a fresh server; the median run is reported and the min-max range shown"
+ }
+}

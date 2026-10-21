@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" role="img" aria-label="Purchase cycles/s vs number of distinct products bought" font-family="system-ui, sans-serif" font-size="12">
+<title>Purchase cycles/s vs number of distinct products bought</title><rect width="720" height="400" fill="#fff"/>
+<text x="360.0" y="24" text-anchor="middle" font-size="15" font-weight="600" fill="#111">Purchase cycles/s vs number of distinct products bought</text>
+<line x1="70" y1="308.0" x2="696" y2="308.0" stroke="#e5e7eb"/>
+<text x="62" y="312.0" text-anchor="end" fill="#374151">0.00</text>
+<line x1="70" y1="255.6" x2="696" y2="255.6" stroke="#e5e7eb"/>
+<text x="62" y="259.6" text-anchor="end" fill="#374151">41.4</text>
+<line x1="70" y1="203.2" x2="696" y2="203.2" stroke="#e5e7eb"/>
+<text x="62" y="207.2" text-anchor="end" fill="#374151">82.9</text>
+<line x1="70" y1="150.8" x2="696" y2="150.8" stroke="#e5e7eb"/>
+<text x="62" y="154.8" text-anchor="end" fill="#374151">124</text>
+<line x1="70" y1="98.4" x2="696" y2="98.4" stroke="#e5e7eb"/>
+<text x="62" y="102.4" text-anchor="end" fill="#374151">166</text>
+<line x1="70" y1="46.0" x2="696" y2="46.0" stroke="#e5e7eb"/>
+<text x="62" y="50.0" text-anchor="end" fill="#374151">207</text>
+<text transform="translate(16 177.0) rotate(-90)" text-anchor="middle" fill="#374151">completed cycles / second</text>
+<text x="132.6" y="326" text-anchor="middle" fill="#374151">1</text>
+<text x="257.8" y="326" text-anchor="middle" fill="#374151">4</text>
+<text x="383.0" y="326" text-anchor="middle" fill="#374151">16</text>
+<text x="508.2" y="326" text-anchor="middle" fill="#374151">64</text>
+<text x="633.4" y="326" text-anchor="middle" fill="#374151">256</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="132.6,251.0 257.8,196.7 383.0,69.8 508.2,74.1 633.4,97.6"/>
+<circle cx="132.6" cy="251.0" r="4" fill="#2563eb"><title>cycles/s: 45.1</title></circle>
+<text x="132.6" y="242.0" text-anchor="middle" font-size="11" fill="#2563eb">45.1</text>
+<circle cx="257.8" cy="196.7" r="4" fill="#2563eb"><title>cycles/s: 88.0</title></circle>
+<text x="257.8" y="187.7" text-anchor="middle" font-size="11" fill="#2563eb">88.0</text>
+<circle cx="383.0" cy="69.8" r="4" fill="#2563eb"><title>cycles/s: 188</title></circle>
+<text x="383.0" y="60.8" text-anchor="middle" font-size="11" fill="#2563eb">188</text>
+<circle cx="508.2" cy="74.1" r="4" fill="#2563eb"><title>cycles/s: 185</title></circle>
+<text x="508.2" y="65.1" text-anchor="middle" font-size="11" fill="#2563eb">185</text>
+<circle cx="633.4" cy="97.6" r="4" fill="#2563eb"><title>cycles/s: 166</title></circle>
+<text x="633.4" y="88.6" text-anchor="middle" font-size="11" fill="#2563eb">166</text>
+<rect x="78" y="376" width="12" height="12" fill="#2563eb"/><text x="96" y="386" fill="#111">cycles/s</text>
+<text x="383.0" y="354" text-anchor="middle" fill="#374151">distinct products (1 = every buyer wants the same SKU)</text>
+</svg>

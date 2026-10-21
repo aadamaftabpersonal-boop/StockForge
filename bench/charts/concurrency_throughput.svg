@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" role="img" aria-label="Throughput vs client concurrency (8 workers, queue 64)" font-family="system-ui, sans-serif" font-size="12">
+<title>Throughput vs client concurrency (8 workers, queue 64)</title><rect width="720" height="400" fill="#fff"/>
+<text x="360.0" y="24" text-anchor="middle" font-size="15" font-weight="600" fill="#111">Throughput vs client concurrency (8 workers, queue 64)</text>
+<line x1="70" y1="308.0" x2="696" y2="308.0" stroke="#e5e7eb"/>
+<text x="62" y="312.0" text-anchor="end" fill="#374151">0.00</text>
+<line x1="70" y1="255.6" x2="696" y2="255.6" stroke="#e5e7eb"/>
+<text x="62" y="259.6" text-anchor="end" fill="#374151">369</text>
+<line x1="70" y1="203.2" x2="696" y2="203.2" stroke="#e5e7eb"/>
+<text x="62" y="207.2" text-anchor="end" fill="#374151">738</text>
+<line x1="70" y1="150.8" x2="696" y2="150.8" stroke="#e5e7eb"/>
+<text x="62" y="154.8" text-anchor="end" fill="#374151">1,107</text>
+<line x1="70" y1="98.4" x2="696" y2="98.4" stroke="#e5e7eb"/>
+<text x="62" y="102.4" text-anchor="end" fill="#374151">1,476</text>
+<line x1="70" y1="46.0" x2="696" y2="46.0" stroke="#e5e7eb"/>
+<text x="62" y="50.0" text-anchor="end" fill="#374151">1,844</text>
+<text transform="translate(16 177.0) rotate(-90)" text-anchor="middle" fill="#374151">requests / second</text>
+<text x="114.7" y="326" text-anchor="middle" fill="#374151">4</text>
+<text x="204.1" y="326" text-anchor="middle" fill="#374151">8</text>
+<text x="293.6" y="326" text-anchor="middle" fill="#374151">16</text>
+<text x="383.0" y="326" text-anchor="middle" fill="#374151">32</text>
+<text x="472.4" y="326" text-anchor="middle" fill="#374151">64</text>
+<text x="561.9" y="326" text-anchor="middle" fill="#374151">128</text>
+<text x="651.3" y="326" text-anchor="middle" fill="#374151">256</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="114.7,127.1 204.1,69.8 293.6,78.4 383.0,74.8 472.4,79.6 561.9,99.3 651.3,107.8"/>
+<circle cx="114.7" cy="127.1" r="4" fill="#2563eb"><title>successful req/s: 1,274</title></circle>
+<text x="114.7" y="118.1" text-anchor="middle" font-size="11" fill="#2563eb">1,274</text>
+<circle cx="204.1" cy="69.8" r="4" fill="#2563eb"><title>successful req/s: 1,677</title></circle>
+<text x="204.1" y="60.8" text-anchor="middle" font-size="11" fill="#2563eb">1,677</text>
+<circle cx="293.6" cy="78.4" r="4" fill="#2563eb"><title>successful req/s: 1,616</title></circle>
+<text x="293.6" y="69.4" text-anchor="middle" font-size="11" fill="#2563eb">1,616</text>
+<circle cx="383.0" cy="74.8" r="4" fill="#2563eb"><title>successful req/s: 1,642</title></circle>
+<text x="383.0" y="65.8" text-anchor="middle" font-size="11" fill="#2563eb">1,642</text>
+<circle cx="472.4" cy="79.6" r="4" fill="#2563eb"><title>successful req/s: 1,608</title></circle>
+<text x="472.4" y="70.6" text-anchor="middle" font-size="11" fill="#2563eb">1,608</text>
+<circle cx="561.9" cy="99.3" r="4" fill="#2563eb"><title>successful req/s: 1,470</title></circle>
+<text x="561.9" y="90.3" text-anchor="middle" font-size="11" fill="#2563eb">1,470</text>
+<circle cx="651.3" cy="107.8" r="4" fill="#2563eb"><title>successful req/s: 1,409</title></circle>
+<text x="651.3" y="98.8" text-anchor="middle" font-size="11" fill="#2563eb">1,409</text>
+<rect x="78" y="376" width="12" height="12" fill="#2563eb"/><text x="96" y="386" fill="#111">successful req/s</text>
+<text x="383.0" y="354" text-anchor="middle" fill="#374151">concurrent clients</text>
+</svg>

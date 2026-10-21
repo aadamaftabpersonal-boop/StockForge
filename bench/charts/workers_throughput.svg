@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" role="img" aria-label="Throughput vs worker threads (browse mix, 64 clients)" font-family="system-ui, sans-serif" font-size="12">
+<title>Throughput vs worker threads (browse mix, 64 clients)</title><rect width="720" height="400" fill="#fff"/>
+<text x="360.0" y="24" text-anchor="middle" font-size="15" font-weight="600" fill="#111">Throughput vs worker threads (browse mix, 64 clients)</text>
+<line x1="70" y1="308.0" x2="696" y2="308.0" stroke="#e5e7eb"/>
+<text x="62" y="312.0" text-anchor="end" fill="#374151">0.00</text>
+<line x1="70" y1="255.6" x2="696" y2="255.6" stroke="#e5e7eb"/>
+<text x="62" y="259.6" text-anchor="end" fill="#374151">476</text>
+<line x1="70" y1="203.2" x2="696" y2="203.2" stroke="#e5e7eb"/>
+<text x="62" y="207.2" text-anchor="end" fill="#374151">952</text>
+<line x1="70" y1="150.8" x2="696" y2="150.8" stroke="#e5e7eb"/>
+<text x="62" y="154.8" text-anchor="end" fill="#374151">1,427</text>
+<line x1="70" y1="98.4" x2="696" y2="98.4" stroke="#e5e7eb"/>
+<text x="62" y="102.4" text-anchor="end" fill="#374151">1,903</text>
+<line x1="70" y1="46.0" x2="696" y2="46.0" stroke="#e5e7eb"/>
+<text x="62" y="50.0" text-anchor="end" fill="#374151">2,379</text>
+<text transform="translate(16 177.0) rotate(-90)" text-anchor="middle" fill="#374151">requests / second</text>
+<text x="122.2" y="326" text-anchor="middle" fill="#374151">1</text>
+<text x="226.5" y="326" text-anchor="middle" fill="#374151">2</text>
+<text x="330.8" y="326" text-anchor="middle" fill="#374151">4</text>
+<text x="435.2" y="326" text-anchor="middle" fill="#374151">8</text>
+<text x="539.5" y="326" text-anchor="middle" fill="#374151">16</text>
+<text x="643.8" y="326" text-anchor="middle" fill="#374151">32</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="122.2,256.6 226.5,211.2 330.8,160.8 435.2,131.3 539.5,90.6 643.8,69.8"/>
+<circle cx="122.2" cy="256.6" r="4" fill="#2563eb"><title>successful req/s: 466</title></circle>
+<text x="122.2" y="247.6" text-anchor="middle" font-size="11" fill="#2563eb">466</text>
+<circle cx="226.5" cy="211.2" r="4" fill="#2563eb"><title>successful req/s: 879</title></circle>
+<text x="226.5" y="202.2" text-anchor="middle" font-size="11" fill="#2563eb">879</text>
+<circle cx="330.8" cy="160.8" r="4" fill="#2563eb"><title>successful req/s: 1,336</title></circle>
+<text x="330.8" y="151.8" text-anchor="middle" font-size="11" fill="#2563eb">1,336</text>
+<circle cx="435.2" cy="131.3" r="4" fill="#2563eb"><title>successful req/s: 1,604</title></circle>
+<text x="435.2" y="122.3" text-anchor="middle" font-size="11" fill="#2563eb">1,604</text>
+<circle cx="539.5" cy="90.6" r="4" fill="#2563eb"><title>successful req/s: 1,974</title></circle>
+<text x="539.5" y="81.6" text-anchor="middle" font-size="11" fill="#2563eb">1,974</text>
+<circle cx="643.8" cy="69.8" r="4" fill="#2563eb"><title>successful req/s: 2,162</title></circle>
+<text x="643.8" y="60.8" text-anchor="middle" font-size="11" fill="#2563eb">2,162</text>
+<rect x="78" y="376" width="12" height="12" fill="#2563eb"/><text x="96" y="386" fill="#111">successful req/s</text>
+<text x="383.0" y="354" text-anchor="middle" fill="#374151">SF_WORKERS</text>
+</svg>

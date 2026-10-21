@@ -1,0 +1,16 @@
+{
+  "scenario": "browse", "threads": 64, "duration_s": 8, "warmup_s": 2,
+  "requests": 10432, "requests_per_s": 1304.0,
+  "latency_ms": {"mean": 49.082, "p50": 46.586, "p95": 90.904, "p99": 116.913, "max": 180.643},
+  "connect_failures": 0, "timeouts": 0, "bad_responses": 0,
+  "purchase_cycles": {"attempted": 0, "completed": 0, "per_s": 0.0},
+  "status_counts": {"200": 10432},
+  "by_operation": {
+    "list_newest": {"count": 4229, "mean": 46.912, "p50": 45.737, "p95": 84.035, "p99": 110.243, "max": 141.941},
+    "list_category": {"count": 1567, "mean": 45.898, "p50": 45.119, "p95": 83.716, "p99": 111.516, "max": 142.308},
+    "search_common_word": {"count": 734, "mean": 83.325, "p50": 81.036, "p95": 121.096, "p99": 151.306, "max": 180.643},
+    "search_rare_token": {"count": 788, "mean": 46.402, "p50": 44.726, "p95": 84.673, "p99": 112.085, "max": 141.298},
+    "detail": {"count": 2077, "mean": 46.515, "p50": 45.204, "p95": 83.968, "p99": 111.326, "max": 141.922},
+    "list_price_sorted": {"count": 1037, "mean": 45.682, "p50": 44.665, "p95": 83.796, "p99": 112.462, "max": 134.535}
+  }
+}

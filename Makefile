@@ -23,7 +23,11 @@ BIN     := $(BUILD)/stockforged
 TESTS   := $(patsubst tests/unit/%.c,$(BUILD)/test_%,$(wildcard tests/unit/test_*.c))
 
 .PHONY: all test itest clean hashpw
-all: $(BIN) $(BUILD)/reconcile
+all: $(BIN) $(BUILD)/reconcile $(BUILD)/loadgen
+
+# closed-loop HTTP load generator for the benchmarks (tools/loadgen.c)
+$(BUILD)/loadgen: tools/loadgen.c | $(BUILD)
+	$(CC) -std=c11 -D_GNU_SOURCE -O2 -g -pthread -Wall -Wextra -Werror -Wno-unused-parameter -o $@ $< -pthread
 
 # offline invariant checker (see src/reconcile.c)
 $(BUILD)/reconcile: tools/reconcile.c $(OBJS) $(VENDOR) | $(BUILD)
