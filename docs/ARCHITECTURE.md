@@ -124,7 +124,7 @@ Error envelope: `{"error":{"code":"INSUFFICIENT_STOCK","message":"…","request_
 | Status | Endpoints |
 |---|---|
 | ✅ Implemented + tested | `GET /healthz` (readiness: pings MySQL, 503 if down), `GET /metrics` (bearer token or admin session), `POST /auth/register`, `/auth/login`, `/auth/logout`, `GET /auth/me`, `GET /categories`, `GET /products` (q, category, sort, after, limit), `GET /products/{id}`, `GET/DELETE /cart`, `PUT/DELETE /cart/items/{id}`, `GET /orders`, `GET /orders/{public_id}`, `POST /admin/products`, `POST /admin/inventory/{id}/adjust`, `GET /admin/audit` |
-| ⏳ Phase 5 | `POST /orders` (checkout), `POST /orders/{id}/pay`, `POST /orders/{id}/cancel`, expiry |
+| ✅ Implemented + tested (Phase 5) | `POST /orders` (checkout, `Idempotency-Key`), `POST /orders/{id}/pay`, `POST /orders/{id}/cancel`, `GET /admin/reconcile`, background reservation expiry. Design: [CHECKOUT.md](CHECKOUT.md) |
 | ⏳ Phase 7 | `GET /admin/orders`, order transitions, `PATCH /admin/products`, `GET /admin/users`, `GET /admin/stats`, `GET /admin/reconcile` |
 
 ## 7. Security model (summary; full threat model in Phase 7)
