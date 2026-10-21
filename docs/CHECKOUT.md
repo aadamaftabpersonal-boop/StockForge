@@ -66,9 +66,12 @@ idempotency row -> user row -> order row -> inventory rows (ascending product_id
 
 A deadlock needs two transactions taking the same two locks in opposite
 orders; no path does. Measured: 150 concurrent carts of 2-4 random products
-across 5 products produced **0** deadlock retries; deliberately reading the
-cart in random order produced **97** (all absorbed by the retry loop, results
-still correct). Retry is the safety net, ordering is the design.
+across 5 products produced **0** deadlock retries on every run, and never a failed
+request. Deliberately reading the cart in random order instead produced
+**102-116 retries per run (3 runs)**; results stayed correct, but in one of the three
+runs a single request exhausted its 6 attempts and the client got `503 DB_BUSY`.
+Ordering is the design; the retry loop is only the safety net, and a weak one
+under heavy contention.
 
 **Idempotency across crashes and timeouts.** The key row and the order become
 visible in the same commit. If the response is lost (client disconnect,
@@ -142,9 +145,9 @@ the guarding tests to fail. Result: 12/12 mutants killed.
 ## 6. Known limitations (stated, not hidden)
 
 * **Crash recovery and durability are InnoDB's job.** We test the *application's* transaction boundaries and the retry protocol, not MySQL's redo log.
-* **Commit with unknown outcome** (connection dies during `COMMIT`): the client sees 503 and must retry with the same key; that is correct for checkout (idempotency key) but pay/cancel rely on their state-based idempotency instead. A dropped DB connection mid-checkout is exercised in Phase 6 (needs controlling the DB container).
+* **Commit with unknown outcome** (connection dies during `COMMIT`): the client sees 503 and must retry with the same key; that is correct for checkout (idempotency key) but pay/cancel rely on their state-based idempotency instead. This is now tested exhaustively: a fault proxy cuts the DB connection at every command of checkout, pay and cancel, before and after the command executes (322 distinct points, all converge); see [FAILURE_TESTING.md](FAILURE_TESTING.md). That work also found and fixed a real bug (statements escaping a transaction after a connection loss).
 * **Single MySQL primary.** Row locks serialise correctly there; a multi-primary or replica-read setup would need different reasoning.
 * **Carts are advisory**; stock is only claimed at checkout. A user can hold a cart for items that later sell out, and is told at checkout.
 * **The 15-minute reservation (`SF_RESERVATION_TTL_S`) is a product decision:** shorter frees stock faster but frustrates slow payers; longer lets abandoned carts-in-checkout starve real buyers.
-* **Hot-row throughput:** every buyer of one product serialises on its inventory row. Fine for retail volumes; a flash sale on a single SKU is bounded by lock hand-off time (Phase 6 measures this).
+* **Hot-row throughput:** every buyer of one product serialises on its inventory row. Measured ([BENCHMARKS.md](BENCHMARKS.md) section 3, medians of 3 runs): with all 32 buyers on one SKU, 45 full purchase cycles/s (about 135 write transactions/s), checkout p50 200 ms, average row-lock wait 105 ms, and zero deadlocks; spread over 16 SKUs it is 188 cycles/s. Fine for retail volumes; a flash sale on one SKU is bounded by this lock hand-off rate on this hardware.
 * The `Idempotent-Replay` response header and stored response mean a replay returns the order *as it was at creation*, not its current status. Poll `GET /orders/{id}` for current state.

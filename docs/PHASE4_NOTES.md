@@ -44,8 +44,8 @@ architecture document stays a stable reference.
 - **Availability** is `on_hand - reserved`, computed in SQL; `stock_status` is
   derived from the per-product low-stock threshold.
 - Migration `002` adds `ix_products_active_price` for price-sorted browsing
-  without a category. **Not yet proven with EXPLAIN**: that comparison belongs
-  to the Phase 6 query-plan study, and until then it is a hypothesis.
+  without a category. **Now measured** (Phase 6, [BENCHMARKS.md](BENCHMARKS.md)): 0.34 ms with it,
+  115 ms without it on 100,048 products (341x), because MySQL otherwise reads and sorts every row.
 
 ## 8.4 Findings from testing (things the tests caught, not inspection)
 

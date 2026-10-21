@@ -33,7 +33,7 @@ concurrency-safe checkout, Apache at the edge, storefront + admin console.
 | 3 | Build + test harness ✅ | Dev Docker image; `make` builds with `-Wall -Wextra -Werror`; ASan/UBSan/TSan targets; unit + integration tests; HTTP server answers `/healthz` through the thread pool (no DB yet) |
 | 4 | Catalog, identity, inventory, orders ✅ | Register/login (Argon2id, sessions, CSRF), product list/search/pagination, cart, order read APIs, admin stock adjust; integration tests green. Details: `docs/PHASE4_NOTES.md` |
 | 5 | **Concurrent checkout** ✅ | Idempotent `POST /orders`; 300 concurrent buyers vs stock = 1 ⇒ exactly 1 order, `on_hand ≥ 0`, reconcile clean; deadlock-retry covered; pay/cancel/expiry; mutation-tested. Design + guarantee→test matrix: `docs/CHECKOUT.md` |
-| 6 | Failure, security, observability, perf | Failure-injection suite (kill DB / server / client mid-checkout) with invariant verification after recovery; rate limits; metrics; ASan/Valgrind runs; measured benchmark report |
+| 6 | Failure, security, observability, perf ✅ | Fault-proxy sweeps at 322 points of checkout/pay/cancel + outage/hang/latency tests; authz matrix with meta-test; 4,000-request HTTP/JSON fuzzing; DB metrics and slow-query log; security headers and session cap; ASan/UBSan/TSan/Valgrind runs; C load generator, 3-run benchmarks, query-plan study, GDB profile. Docs: `FAILURE_TESTING.md`, `SECURITY.md`, `OPERATIONS.md`, `BENCHMARKS.md`, `DB_QUERY_PLANS.md` |
 | 7 | Frontend + deploy + docs | Storefront + admin console on real APIs; Compose with Apache+TLS; CI; threat model; demo script |
 | 8 | Stretch (in order) | Ledger+reconcile CLI (ledger table already in schema), expiry worker, outbox, fault-injection flag, 2nd server process |
 

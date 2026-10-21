@@ -7,5 +7,6 @@ __pycache__/
 .tmp/
 .claude/
 bench/results/*.raw
+bench/results/_users.txt
 *.log
 core
