@@ -166,9 +166,10 @@ class OrdersRead(unittest.TestCase):
         self.assertEqual(ava.get("/api/v1/orders?after=abc").status, 422)
         self.assertEqual(ava.get("/api/v1/orders?limit=0").status, 422)
 
-    def test_order_writes_not_exposed_yet(self):
+    def test_checkout_requires_idempotency_key(self):
         ava = logged_in(self.srv, AVA)
-        self.assertEqual(ava.post("/api/v1/orders", {}).status, 405)     # POST arrives with checkout (phase 5)
+        r = ava.post("/api/v1/orders", {})
+        self.assertEqual((r.status, r.json["error"]["code"]), (400, "IDEMPOTENCY_KEY_REQUIRED"))
 
 
 if __name__ == "__main__":

@@ -35,6 +35,7 @@ class Server:
             SF_PORT=str(self.port), SF_BIND="127.0.0.1",
             SF_DB_NAME=dbtools.TEST_DB, SF_COOKIE_SECURE="0", SF_METRICS_TOKEN=METRICS_TOKEN,
             SF_RL_LOGIN_IP="100000", SF_RL_LOGIN_ACCT="100000", SF_RL_REGISTER_IP="100000",
+            SF_RL_CHECKOUT_USER="100000", SF_EXPIRY_SWEEP_MS="500",
         )
         e.update({k: str(v) for k, v in env.items()})
         # stderr goes to a file: a full pipe would block a chatty server, and a
@@ -61,6 +62,12 @@ class Server:
             self.proc.kill()
             self.proc.wait()
         log = self.log()
+        if os.environ.get("SF_SUMMARIZE_DB_ERRORS"):          # diagnostic: which MySQL errors did the server hit?
+            import re
+            codes = {}
+            for m in re.finditer(r'"event":"db","msg":"[^"]*errno=(\d+)', log):
+                codes[m.group(1)] = codes.get(m.group(1), 0) + 1
+            print(f"\n    [db-errors] {codes}")
         for marker in ("Sanitizer", "runtime error:", "ERROR: AddressSanitizer", "SUMMARY:"):
             if marker in log:     # a sanitizer build found a bug: never let it pass silently
                 raise AssertionError(f"sanitizer report in server log:\n{log}")
@@ -172,6 +179,40 @@ class Client:
         self.cookie = r.headers["set-cookie"].split(";")[0].split("=", 1)[1]
         self.csrf = r.json["csrf_token"]
         return r
+
+
+def session_client(server, user):
+    """Client for a (uid, cookie, csrf) tuple from dbtools.make_users()."""
+    c = Client(server)
+    c.cookie, c.csrf = user[1], user[2]
+    return c
+
+
+def checkout(client, key=None, body=None, headers=None):
+    import uuid
+    h = {"Idempotency-Key": key or uuid.uuid4().hex}
+    h.update(headers or {})
+    return client.post("/api/v1/orders", body, headers=h)
+
+
+def run_parallel(n, fn):
+    """Run fn(i) on n threads released simultaneously; returns results in index order.
+    Exceptions are captured and returned as the result (never lost)."""
+    import threading
+    results = [None] * n
+    gate = threading.Barrier(n)
+
+    def run(i):
+        try:
+            gate.wait(timeout=60)
+            results[i] = fn(i)
+        except Exception as e:      # noqa: BLE001 - surfaced to the asserting test
+            results[i] = e
+
+    ts = [threading.Thread(target=run, args=(i,)) for i in range(n)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    return results
 
 
 def logged_in(server, creds):
