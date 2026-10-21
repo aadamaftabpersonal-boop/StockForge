@@ -9,6 +9,22 @@
  * slightly-torn-in-time but never corrupt snapshot. */
 #define METRICS_BUCKETS 11   /* le 1,2,5,10,25,50,100,250,500,1000 ms, +Inf */
 
+/* Order-engine events: lets operators (and tests) see contention, not guess it. */
+typedef enum {
+    MC_CREATED = 0,        /* new order committed */
+    MC_REPLAYED,           /* idempotent replay served */
+    MC_IDEM_CONFLICT,      /* same key, different request */
+    MC_INSUFFICIENT,       /* checkout refused: not enough stock */
+    MC_DEADLOCK_RETRY,     /* a transaction was re-run after deadlock / lock timeout */
+    MC_RETRY_EXHAUSTED,    /* gave up after TX_MAX_ATTEMPTS */
+    MC_PAID,
+    MC_PAY_FAILED,
+    MC_CANCELLED,
+    MC_EXPIRED,
+    MC_COUNT
+} checkout_event;
+void metrics_checkout_event(checkout_event e);
+
 void metrics_conn_accepted(void);
 void metrics_conn_rejected_overload(void);
 void metrics_worker_busy(int delta);

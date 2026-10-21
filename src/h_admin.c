@@ -4,6 +4,7 @@
 
 #include "api.h"
 #include "audit.h"
+#include "reconcile.h"
 #include "validate.h"
 
 #define DB_DOWN "Service temporarily unavailable."
@@ -133,6 +134,13 @@ int h_admin_stock_adjust(rctx *c) {
 out:
     cJSON_Delete(b);
     return c->sent;
+}
+
+int h_admin_reconcile(rctx *c) {
+    rc_check checks[RC_MAX_CHECKS];
+    int n = reconcile_run(c->db, checks, RC_MAX_CHECKS);
+    if (n < 0) return api_err(c, 503, "DB_UNAVAILABLE", DB_DOWN, NULL);
+    return api_ok(c, 200, reconcile_json(checks, n));
 }
 
 int h_admin_audit(rctx *c) {

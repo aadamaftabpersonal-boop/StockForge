@@ -55,7 +55,8 @@ static void note_error(db *d, const char *where) {
     d->last_errno = d->my ? mysql_errno(d->my) : 0;
     char m[256];
     snprintf(m, sizeof m, "%s: errno=%u %s", where, d->last_errno, d->my ? mysql_error(d->my) : "no connection");
-    log_msg("error", "db", m);
+    /* deadlock (1213) and lock-wait timeout (1205) are expected under contention and are retried */
+    log_msg(d->last_errno == 1213 || d->last_errno == 1205 ? "warn" : "error", "db", m);
 }
 
 static int is_conn_error(unsigned e) {
@@ -77,8 +78,10 @@ static int connect_db(db *d) {
         return -1;
     }
     mysql_set_character_set(d->my, "utf8mb4");
+    /* A bounded lock wait: better to fail fast and retry than to park a worker for the 50 s default. */
     if (mysql_query(d->my, "SET SESSION time_zone='+00:00', "
-                           "SESSION transaction_isolation='READ-COMMITTED'")) {
+                           "SESSION transaction_isolation='READ-COMMITTED', "
+                           "SESSION innodb_lock_wait_timeout=10")) {
         note_error(d, "session setup");
         drop_conn(d);
         return -1;

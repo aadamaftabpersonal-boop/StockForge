@@ -23,7 +23,11 @@ BIN     := $(BUILD)/stockforged
 TESTS   := $(patsubst tests/unit/%.c,$(BUILD)/test_%,$(wildcard tests/unit/test_*.c))
 
 .PHONY: all test itest clean hashpw
-all: $(BIN)
+all: $(BIN) $(BUILD)/reconcile
+
+# offline invariant checker (see src/reconcile.c)
+$(BUILD)/reconcile: tools/reconcile.c $(OBJS) $(VENDOR) | $(BUILD)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 $(BIN): $(BUILD)/main.o $(OBJS) $(VENDOR)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)

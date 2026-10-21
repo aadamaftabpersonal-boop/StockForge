@@ -54,6 +54,9 @@ int config_load(config *cfg, char *err, size_t errn) {
     LONG(cfg->rl_login_ip, "SF_RL_LOGIN_IP", 30, 1, 1000000);
     LONG(cfg->rl_login_acct, "SF_RL_LOGIN_ACCT", 8, 1, 1000000);
     LONG(cfg->rl_register_ip, "SF_RL_REGISTER_IP", 10, 1, 1000000);
+    LONG(cfg->rl_checkout_user, "SF_RL_CHECKOUT_USER", 30, 1, 1000000);
+    LONG(cfg->reservation_ttl_s, "SF_RESERVATION_TTL_S", 900, 5, 86400);
+    LONG(cfg->expiry_sweep_ms, "SF_EXPIRY_SWEEP_MS", 5000, 50, 3600000);
 
     if (env_str("SF_DB_HOST", "127.0.0.1", cfg->db_host, sizeof cfg->db_host, 0, err, errn)) return -1;
     if (env_str("SF_DB_USER", "sf_app", cfg->db_user, sizeof cfg->db_user, 0, err, errn)) return -1;

@@ -38,11 +38,15 @@ static const route ROUTES[] = {
     {"DELETE", "/api/v1/cart/items/:id",              h_cart_delete_item,     A_USER,  0},
 
     {"GET",    "/api/v1/orders",                      h_orders,               A_USER,  0},
+    {"POST",   "/api/v1/orders",                      h_checkout,             A_USER,  0},
     {"GET",    "/api/v1/orders/:id",                  h_order,                A_USER,  0},
+    {"POST",   "/api/v1/orders/:id/pay",              h_pay,                  A_USER,  0},
+    {"POST",   "/api/v1/orders/:id/cancel",           h_cancel,               A_USER,  0},
 
     {"POST",   "/api/v1/admin/products",              h_admin_product_create, A_ADMIN, 0},
     {"POST",   "/api/v1/admin/inventory/:id/adjust",  h_admin_stock_adjust,   A_ADMIN, 0},
     {"GET",    "/api/v1/admin/audit",                 h_admin_audit,          A_ADMIN, 0},
+    {"GET",    "/api/v1/admin/reconcile",             h_admin_reconcile,      A_ADMIN, 0},
 };
 
 static int split(const char *p, size_t n, const char **seg, size_t *len, int max) {

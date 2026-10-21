@@ -29,6 +29,11 @@ typedef struct {
     int    rl_login_ip;           /* login attempts per IP per minute */
     int    rl_login_acct;         /* login attempts per account per 5 minutes */
     int    rl_register_ip;        /* registrations per IP per minute */
+    int    rl_checkout_user;      /* checkout attempts per user per minute */
+
+    /* order engine */
+    int    reservation_ttl_s;     /* how long an unpaid order holds stock */
+    int    expiry_sweep_ms;       /* background sweep interval for expired reservations */
 } config;
 
 /* Fills cfg from SF_* environment variables. Returns 0, or -1 with a message in err. */

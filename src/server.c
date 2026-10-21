@@ -22,6 +22,7 @@
 #include "metrics.h"
 #include "queue.h"
 #include "router.h"
+#include "sweeper.h"
 #include "util.h"
 
 typedef struct {
@@ -125,7 +126,7 @@ static int open_listener(const config *cfg) {
     struct sockaddr_in a = {.sin_family = AF_INET, .sin_port = htons((uint16_t)cfg->port)};
     if (inet_pton(AF_INET, cfg->bind_addr, &a.sin_addr) != 1 ||
         bind(fd, (struct sockaddr *)&a, sizeof a) != 0 ||
-        listen(fd, 128) != 0) {
+        listen(fd, 1024) != 0) {              /* absorb connection bursts; the kernel clamps to somaxconn */
         int e = errno;
         close(fd);
         errno = e;
@@ -187,6 +188,8 @@ int server_run(const config *cfg) {
         return 1;
     }
 
+    if (sweeper_start(cfg)) log_msg("error", "startup", "expiry sweeper failed to start");
+
     snprintf(msg, sizeof msg, "listening on %s:%d workers=%d queue=%d",
              cfg->bind_addr, cfg->port, cfg->workers, cfg->queue_cap);
     log_msg("info", "started", msg);
@@ -215,6 +218,7 @@ int server_run(const config *cfg) {
     fdq_close(&s.queue);           /* workers finish queued + in-flight work, then exit */
     for (int i = 0; i < started; i++) pthread_join(workers[i], NULL);
     pthread_join(sigt, NULL);
+    sweeper_stop();
     auth_global_free();
     fdq_destroy(&s.queue);
     close(s.wake_pipe[0]);
