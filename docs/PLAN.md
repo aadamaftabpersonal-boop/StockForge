@@ -31,7 +31,7 @@ concurrency-safe checkout, Apache at the edge, storefront + admin console.
 | 1 | Inspect & constraints | This document. ✅ |
 | 2 | Architecture, schema, API contracts, state machine, invariants | Schema applies cleanly to MySQL 8.4 and CHECK constraints reject bad states ✅; `ARCHITECTURE.md` written ✅ |
 | 3 | Build + test harness ✅ | Dev Docker image; `make` builds with `-Wall -Wextra -Werror`; ASan/UBSan/TSan targets; unit + integration tests; HTTP server answers `/healthz` through the thread pool (no DB yet) |
-| 4 | Catalog, identity, inventory, orders | Register/login (Argon2id, sessions, CSRF), product list/search/pagination, cart, order read APIs; integration tests green |
+| 4 | Catalog, identity, inventory, orders ✅ | Register/login (Argon2id, sessions, CSRF), product list/search/pagination, cart, order read APIs, admin stock adjust; integration tests green. Details: `docs/PHASE4_NOTES.md` |
 | 5 | **Concurrent checkout** | Idempotent `POST /orders`; 500 concurrent buyers vs stock = 1 ⇒ exactly 1 order, `on_hand ≥ 0`, reconcile clean; deadlock-retry covered |
 | 6 | Failure, security, observability, perf | Failure-injection suite (kill DB / server / client mid-checkout) with invariant verification after recovery; rate limits; metrics; ASan/Valgrind runs; measured benchmark report |
 | 7 | Frontend + deploy + docs | Storefront + admin console on real APIs; Compose with Apache+TLS; CI; threat model; demo script |

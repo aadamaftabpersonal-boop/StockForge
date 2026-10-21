@@ -119,6 +119,14 @@ MySQL, not this project, owns WAL/redo logging and crash recovery. We test *appl
 
 Error envelope: `{"error":{"code":"INSUFFICIENT_STOCK","message":"…","request_id":"…"}}`; codes are stable strings, never stack traces or SQL text.
 
+### 6a. Implementation status (end of Phase 4)
+
+| Status | Endpoints |
+|---|---|
+| ✅ Implemented + tested | `GET /healthz` (readiness: pings MySQL, 503 if down), `GET /metrics` (bearer token or admin session), `POST /auth/register`, `/auth/login`, `/auth/logout`, `GET /auth/me`, `GET /categories`, `GET /products` (q, category, sort, after, limit), `GET /products/{id}`, `GET/DELETE /cart`, `PUT/DELETE /cart/items/{id}`, `GET /orders`, `GET /orders/{public_id}`, `POST /admin/products`, `POST /admin/inventory/{id}/adjust`, `GET /admin/audit` |
+| ⏳ Phase 5 | `POST /orders` (checkout), `POST /orders/{id}/pay`, `POST /orders/{id}/cancel`, expiry |
+| ⏳ Phase 7 | `GET /admin/orders`, order transitions, `PATCH /admin/products`, `GET /admin/users`, `GET /admin/stats`, `GET /admin/reconcile` |
+
 ## 7. Security model (summary; full threat model in Phase 7)
 
-Argon2id via libsodium; 256-bit random session tokens, only SHA-256 stored; cookie flags HttpOnly/Secure/SameSite; double-submit-style CSRF token bound to session; prepared statements only; JSON escaping on output and `textContent`-only DOM insertion on the frontend; per-IP + per-account login throttling; 64 KiB body / 8 KiB header caps; read/write socket timeouts; secrets only from env; logs never contain passwords, tokens or card data; payments are simulated and no PAN field exists.
+*(Details of what is actually implemented are in section 8.)* Argon2id via libsodium; 256-bit random session tokens, only SHA-256 stored; cookie flags HttpOnly/Secure/SameSite; double-submit-style CSRF token bound to session; prepared statements only; JSON escaping on output and `textContent`-only DOM insertion on the frontend; per-IP + per-account login throttling; 64 KiB body / 8 KiB header caps; read/write socket timeouts; secrets only from env; logs never contain passwords, tokens or card data; payments are simulated and no PAN field exists.
