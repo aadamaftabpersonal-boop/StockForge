@@ -15,7 +15,8 @@ SRC="${1:-$(git -C "$(dirname "$0")/.." remote get-url origin)}"
 # "-w /work", and /tmp paths mean nothing to docker.exe. Turn that off and hand docker real Windows paths.
 export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
 TMP="$(mktemp -d)"
-TMPW="$(cd "$TMP" && { pwd -W 2>/dev/null || pwd; })"
+TMP="$(cd "$TMP" && { pwd -W 2>/dev/null || pwd; })"     # one spelling (C:/... on Windows) that bash, git and docker all understand
+TMPW="$TMP"
 trap 'docker compose -p sffresh --env-file "$TMPW/repo/.env" -f "$TMPW/repo/deploy/docker-compose.yml" --profile stack down -v >/dev/null 2>&1 || true; rm -rf "$TMP"' EXIT
 step() { printf '\n== %s\n' "$*"; }
 
