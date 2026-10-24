@@ -11,13 +11,18 @@
 # It only sees COMMITTED and PUSHED work: that is the point.
 set -eu
 SRC="${1:-$(git -C "$(dirname "$0")/.." remote get-url origin)}"
+# Git Bash on Windows rewrites paths that look like /x into C:/.../x before docker sees them, which breaks
+# "-w /work", and /tmp paths mean nothing to docker.exe. Turn that off and hand docker real Windows paths.
+export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
 TMP="$(mktemp -d)"
-trap 'docker compose -p sffresh --env-file "$TMP/repo/.env" -f "$TMP/repo/deploy/docker-compose.yml" --profile stack down -v >/dev/null 2>&1 || true; rm -rf "$TMP"' EXIT
+TMPW="$(cd "$TMP" && { pwd -W 2>/dev/null || pwd; })"
+trap 'docker compose -p sffresh --env-file "$TMPW/repo/.env" -f "$TMPW/repo/deploy/docker-compose.yml" --profile stack down -v >/dev/null 2>&1 || true; rm -rf "$TMP"' EXIT
 step() { printf '\n== %s\n' "$*"; }
 
 step "clone $SRC"
 git clone --depth 1 "$SRC" "$TMP/repo"
 cd "$TMP/repo"
+HOSTPWD="$(pwd -W 2>/dev/null || pwd)"
 
 step "configure (random throwaway passwords)"
 rnd() { head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
@@ -31,7 +36,7 @@ $COMPOSE up -d --wait db
 # scripts/dev.sh joins network stockforge_default; our project is named sffresh, so run the dev image directly.
 step "build dev image"
 docker build -t stockforge-dev-fresh -f deploy/Dockerfile.dev deploy >/dev/null
-dev() { docker run --rm --env-file .env --network sffresh_default -v "$PWD":/work -w /work stockforge-dev-fresh "$@"; }
+dev() { docker run --rm --env-file .env --network sffresh_default -v "$HOSTPWD":/work -w /work stockforge-dev-fresh "$@"; }
 
 step "schema and seed"
 dev sh scripts/db-init.sh --seed
