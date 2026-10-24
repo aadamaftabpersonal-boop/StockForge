@@ -1,0 +1,9 @@
+.git
+build
+bench/results
+tests
+docs
+.env
+deploy/apache/certs
+*.pyc
+__pycache__

@@ -1,0 +1,69 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# NOTE: this workflow has not yet been run on GitHub. Locally the same steps run
+# through scripts/check.sh inside deploy/Dockerfile.dev (Ubuntu 24.04), which is what
+# this job reproduces. The first run may need small adjustments; see docs/OPERATIONS.md.
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        san: ["", "address,undefined", "thread"]
+    services:
+      db:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: stockforge
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-root-password"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      SF_DB_HOST: 127.0.0.1
+      MYSQL_ROOT_PASSWORD: ci-root-password
+      MYSQL_DATABASE: stockforge
+      SF_DB_USER: sf_app
+      SF_DB_PASSWORD: ci-app-password
+      SF_DB_NAME: stockforge
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config \
+            libmariadb-dev libsodium-dev mysql-client python3-pymysql python3-cryptography
+      - name: Create schema and least-privilege user
+        run: sh scripts/db-init.sh
+      - name: Build, unit tests, integration tests
+        env:
+          SAN: ${{ matrix.san }}
+        run: sh scripts/check.sh
+
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static checks on the frontend
+        run: |
+          # no innerHTML/outerHTML/document.write anywhere: user text goes in with textContent only
+          if grep -rnE 'innerHTML|outerHTML|insertAdjacentHTML|document\.write' web/assets/js web/index.html web/admin/index.html | grep -vE ':[0-9]+:\s*//'; then
+            echo "forbidden HTML-injection sink found"; exit 1; fi
+          # the CSP forbids inline scripts, so none may exist (every <script> needs src=)
+          if grep -nP '<script(?![^>]*\bsrc=)' web/index.html web/admin/index.html; then
+            echo "inline script found"; exit 1; fi
+      - name: JavaScript syntax
+        run: for f in web/assets/js/*.js; do node --check "$f" || exit 1; done
+      - name: Apache configuration is valid
+        run: |
+          docker run --rm -v "$PWD/deploy/apache:/etc/apache2conf:ro" -v "$PWD/web:/usr/local/apache2/htdocs:ro" \
+            httpd:2.4 sh -c 'cp /etc/apache2conf/httpd.conf /tmp/h.conf && sed -i "s#/usr/local/apache2/conf/site.conf#/etc/apache2conf/site.conf#" /tmp/h.conf && httpd -t -f /tmp/h.conf -D DEV_HTTP' || \
+            echo "::warning::httpd -t needs the compose mounts (certs, proxy hosts); run docker compose --profile stack config to validate locally"

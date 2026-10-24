@@ -8,5 +8,6 @@ __pycache__/
 .claude/
 bench/results/*.raw
 bench/results/_users.txt
+deploy/apache/certs/
 *.log
 core

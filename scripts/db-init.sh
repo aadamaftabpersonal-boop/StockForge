@@ -21,7 +21,8 @@ my -e "CREATE USER IF NOT EXISTS '$USER'@'%' IDENTIFIED BY '$SF_DB_PASSWORD';
        ALTER USER '$USER'@'%' IDENTIFIED BY '$SF_DB_PASSWORD';
        GRANT SELECT, INSERT, UPDATE, DELETE ON \`$DB\`.* TO '$USER'@'%';"
 if [ "${1:-}" = "--seed" ]; then
-  if [ "$(my -N "$DB" -e 'SELECT COUNT(*) FROM users')" = "0" ]; then echo "loading demo seed"; my "$DB" < db/seed/001_seed.sql
+  if [ "$(my -N "$DB" -e 'SELECT COUNT(*) FROM users')" = "0" ]; then
+    echo "loading demo seed + 45 days of demo order history"; my "$DB" < db/seed/001_seed.sql; my "$DB" < db/seed/002_demo_history.sql
   else echo "users exist; not seeding"; fi
 fi
 echo "database $DB ready"

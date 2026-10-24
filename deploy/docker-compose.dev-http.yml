@@ -1,0 +1,8 @@
+# DEVELOPMENT / TESTING ONLY: also serves the site over plain HTTP on http://localhost:8081
+# (no certificate warning), so browsers and automated UI checks can reach it.
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.dev-http.yml --env-file .env --profile stack up -d
+# Session cookies stay HttpOnly; browsers accept Secure cookies on http://localhost as a special case.
+# Never use this file for a real deployment: the default stack redirects every HTTP request to HTTPS.
+services:
+  web:
+    command: ["httpd-foreground", "-D", "DEV_HTTP"]
