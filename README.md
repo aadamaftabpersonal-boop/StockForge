@@ -6,8 +6,8 @@ concurrency-safe checkout engine that cannot oversell stock.
 
 Status: **feature-complete through Phase 7**: checkout engine, failure injection, security
 hardening, observability, a measured performance study, a storefront and admin console on the real
-APIs, and an Apache + TLS deployment. Not yet verified: the GitHub Actions workflow (`.github/workflows/ci.yml`)
-has not run on GitHub, and `scripts/fresh-clone-test.sh` needs the work to be pushed before it can run.
+APIs, and an Apache + TLS deployment. `scripts/fresh-clone-test.sh` has passed on a clean clone of this repository (Windows 11, Docker Desktop, Git Bash).
+Not yet verified: the GitHub Actions workflow (`.github/workflows/ci.yml`) has not run on GitHub.
 Where to start reading:
 
 | document | what it is |
