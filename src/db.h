@@ -54,6 +54,7 @@ int  db_ping(db *d);                      /* 0 ok */
 int64_t  db_exec(db *d, const char *sql, const char *pfmt, ...);   /* affected rows, or -1 */
 db_rs   *db_query(db *d, const char *sql, const char *pfmt, ...);  /* NULL on error */
 db_rs   *db_query_p(db *d, const char *sql, const db_params *p);   /* NULL on error */
+int64_t  db_exec_p(db *d, const char *sql, const db_params *p);    /* affected rows, or -1 */
 int      db_rs_next(db_rs *rs, const char *rfmt, ...);             /* 1 row, 0 done, -1 error */
 void     db_rs_free(db_rs *rs);
 

@@ -47,6 +47,17 @@ static const route ROUTES[] = {
     {"POST",   "/api/v1/admin/inventory/:id/adjust",  h_admin_stock_adjust,   A_ADMIN, 0},
     {"GET",    "/api/v1/admin/audit",                 h_admin_audit,          A_ADMIN, 0},
     {"GET",    "/api/v1/admin/reconcile",             h_admin_reconcile,      A_ADMIN, 0},
+    {"GET",    "/api/v1/admin/stats",                 h_admin_stats,          A_ADMIN, 0},
+    {"GET",    "/api/v1/admin/metrics",               h_metrics,              A_ADMIN, 0},   /* the console's view of /metrics */
+    {"GET",    "/api/v1/admin/orders",                h_admin_orders,         A_ADMIN, 0},
+    {"GET",    "/api/v1/admin/orders/:id",            h_admin_order,          A_ADMIN, 0},
+    {"POST",   "/api/v1/admin/orders/:id/transition", h_admin_order_transition, A_ADMIN, 0},
+    {"GET",    "/api/v1/admin/products",              h_admin_products,       A_ADMIN, 0},
+    {"PATCH",  "/api/v1/admin/products/:id",          h_admin_product_patch,  A_ADMIN, 0},
+    {"POST",   "/api/v1/admin/categories",            h_admin_category_create, A_ADMIN, 0},
+    {"PATCH",  "/api/v1/admin/categories/:id",        h_admin_category_patch, A_ADMIN, 0},
+    {"GET",    "/api/v1/admin/users",                 h_admin_users,          A_ADMIN, 0},
+    {"PATCH",  "/api/v1/admin/users/:id",             h_admin_user_patch,     A_ADMIN, 0},
 };
 
 static int split(const char *p, size_t n, const char **seg, size_t *len, int max) {

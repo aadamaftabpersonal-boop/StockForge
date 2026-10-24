@@ -229,6 +229,14 @@ int64_t db_exec(db *d, const char *sql, const char *pfmt, ...) {
     return d->affected;
 }
 
+int64_t db_exec_p(db *d, const char *sql, const db_params *p) {
+    MYSQL_STMT *st = run(d, sql, p->p, p->n);
+    if (!st) return -1;
+    mysql_stmt_close(st);
+    observe(sql, tl_t0);
+    return d->affected;
+}
+
 static db_rs *finish_query(db *d, const char *sql, MYSQL_STMT *st);
 
 db_rs *db_query(db *d, const char *sql, const char *pfmt, ...) {

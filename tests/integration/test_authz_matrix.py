@@ -37,6 +37,17 @@ MATRIX = [
     ("POST",   "/api/v1/admin/inventory/99999/adjust",   {"delta": 1, "reason": "restock"}, None, (401, 403, 404)),
     ("GET",    "/api/v1/admin/audit",                    None, None, (401, 403, 200)),
     ("GET",    "/api/v1/admin/reconcile",                None, None, (401, 403, 200)),
+    ("GET",    "/api/v1/admin/stats",                    None, None, (401, 403, 200)),
+    ("GET",    "/api/v1/admin/metrics",                  None, None, (401, 403, 200)),
+    ("GET",    "/api/v1/admin/orders",                   None, None, (401, 403, 200)),
+    ("GET",    f"/api/v1/admin/orders/{SOME_ORDER}",     None, None, (401, 403, 404)),
+    ("POST",   f"/api/v1/admin/orders/{SOME_ORDER}/transition", {"to": "SHIPPED"}, None, (401, 403, 404)),
+    ("GET",    "/api/v1/admin/products",                 None, None, (401, 403, 200)),
+    ("PATCH",  "/api/v1/admin/products/1",               {},   None, (401, 403, 422)),
+    ("POST",   "/api/v1/admin/categories",               {},   None, (401, 403, 422)),
+    ("PATCH",  "/api/v1/admin/categories/1",             {},   None, (401, 403, 422)),
+    ("GET",    "/api/v1/admin/users",                    None, None, (401, 403, 200)),
+    ("PATCH",  "/api/v1/admin/users/99999",              {"is_active": True}, None, (401, 403, 404)),
 ]
 
 
@@ -67,7 +78,7 @@ class AuthzMatrix(unittest.TestCase):
 
     def test_matrix_covers_every_route_in_the_router(self):
         src = open(os.path.join(dbtools.REPO, "src", "router.c"), encoding="utf-8").read()
-        in_router = set(re.findall(r'\{"(GET|POST|PUT|DELETE)",\s*"([^"]+)"', src))
+        in_router = set(re.findall(r'\{"(GET|POST|PUT|PATCH|DELETE)",\s*"([^"]+)"', src))    # PATCH included: a verb the check cannot see is a hole
         in_router = {(m, p) for m, p in in_router if not p.startswith("/debug/")}
         norm = lambda p: re.sub(r":\w+", "*", p)                    # noqa: E731
         router_set = {(m, norm(p)) for m, p in in_router}

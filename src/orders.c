@@ -216,11 +216,12 @@ typedef struct {
     char         pub[28];
 } olock;
 
-/* SELECT ... FOR UPDATE on one order. 1 found, 0 absent, -1 db error. */
+/* SELECT ... FOR UPDATE on one order. 1 found, 0 absent, -1 db error.
+ * With `pub`, uid restricts to that owner; uid == 0 means ANY owner (administrator actions). */
 static int lock_order(db *d, const char *pub, uint64_t uid, uint64_t oid, olock *o) {
     db_rs *rs = pub
         ? db_query(d, "SELECT id, status, total_cents, (expires_at IS NOT NULL AND expires_at <= NOW(3)), version, "
-                      "public_id FROM orders WHERE public_id = ? AND user_id = ? FOR UPDATE", "su", pub, uid)
+                      "public_id FROM orders WHERE public_id = ? AND (? = 0 OR user_id = ?) FOR UPDATE", "suu", pub, uid, uid)
         : db_query(d, "SELECT id, status, total_cents, (expires_at IS NOT NULL AND expires_at <= NOW(3)), version, "
                       "public_id FROM orders WHERE id = ? FOR UPDATE", "u", oid);
     if (!rs) return -1;
@@ -533,7 +534,8 @@ int orders_pay(db *d, const char *rid, uint64_t uid, const char *pub, pay_scenar
 
 typedef struct {
     const char *rid, *pub;
-    uint64_t    uid;
+    uint64_t    uid;          /* owner filter; 0 = any owner (administrator) */
+    uint64_t    actor;        /* who is recorded in the audit trail */
     order_out  *out;
 } cancel_arg;
 
@@ -569,7 +571,7 @@ static int cancel_body(db *d, void *vp) {
     if (c != 0) return invariant_fail(d, out, a->rid, "cancel cas");
     cJSON *det = cJSON_CreateObject();
     cJSON_AddStringToObject(det, "from", os_name(o.st));
-    audit_order(d, a->rid, a->uid, "order.cancelled", a->pub, det);
+    audit_order(d, a->rid, a->actor, "order.cancelled", a->pub, det);
     cJSON *oj = orders_json_by_id(d, o.id);
     if (!oj) return tx_classify(d);
     if (db_commit(d)) { cJSON_Delete(oj); return TX_FAIL; }
@@ -579,8 +581,64 @@ static int cancel_body(db *d, void *vp) {
 }
 
 int orders_cancel(db *d, const char *rid, uint64_t uid, const char *pub, order_out *out) {
-    cancel_arg a = {.rid = rid, .pub = pub, .uid = uid, .out = out};
+    cancel_arg a = {.rid = rid, .pub = pub, .uid = uid, .actor = uid, .out = out};
     return tx_run(d, cancel_body, &a);
+}
+
+int orders_admin_cancel(db *d, const char *rid, uint64_t admin_id, const char *pub, order_out *out) {
+    cancel_arg a = {.rid = rid, .pub = pub, .uid = 0, .actor = admin_id, .out = out};
+    return tx_run(d, cancel_body, &a);
+}
+
+/* ====================================================== ADMIN FULFILMENT */
+
+typedef struct {
+    const char  *rid, *pub;
+    uint64_t     admin;
+    order_status to;
+    order_out   *out;
+} ship_arg;
+
+/* PAID -> SHIPPED -> DELIVERED, for any owner. Repeating the transition that already happened is a no-op 200. */
+static int ship_body(db *d, void *vp) {
+    ship_arg *a = vp;
+    order_out *out = a->out;
+    out_reset(out);
+    if (db_begin(d)) return TX_FAIL;
+    olock o;
+    int f = lock_order(d, a->pub, 0, 0, &o);
+    if (f < 0) return tx_classify(d);
+    if (f == 0) { db_rollback(d); out_err(out, a->rid, 404, "NOT_FOUND", "No such order."); return TX_DONE; }
+    if (o.st == a->to) {                                   /* idempotent repeat */
+        cJSON *oj = orders_json_by_id(d, o.id);
+        db_rollback(d);
+        if (!oj) return TX_FAIL;
+        out_order(out, 200, oj);
+        out->replay = 1;
+        return TX_DONE;
+    }
+    if (!os_can_transition(o.st, a->to)) {
+        db_rollback(d);
+        out_err(out, a->rid, 409, "ILLEGAL_TRANSITION", "That status change is not allowed from the order's current status.");
+        return TX_DONE;
+    }
+    int c = cas_status(d, o.id, o.st, a->to, o.version);
+    if (c == -1) return tx_classify(d);
+    if (c != 0) return invariant_fail(d, out, a->rid, "ship cas");
+    cJSON *det = cJSON_CreateObject();
+    cJSON_AddStringToObject(det, "from", os_name(o.st));
+    cJSON_AddStringToObject(det, "to", os_name(a->to));
+    audit_order(d, a->rid, a->admin, a->to == OS_SHIPPED ? "order.shipped" : "order.delivered", a->pub, det);
+    cJSON *oj = orders_json_by_id(d, o.id);
+    if (!oj) return tx_classify(d);
+    if (db_commit(d)) { cJSON_Delete(oj); return TX_FAIL; }
+    out_order(out, 200, oj);
+    return TX_DONE;
+}
+
+int orders_admin_fulfil(db *d, const char *rid, uint64_t admin_id, const char *pub, order_status to, order_out *out) {
+    ship_arg a = {.rid = rid, .pub = pub, .admin = admin_id, .to = to, .out = out};
+    return tx_run(d, ship_body, &a);
 }
 
 /* ================================================================== EXPIRY */

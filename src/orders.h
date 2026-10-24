@@ -5,6 +5,7 @@
 
 #include "cJSON.h"
 #include "db.h"
+#include "order_state.h"
 #include "payment_sim.h"
 
 /* The order engine: checkout, payment, cancellation, expiry.
@@ -39,6 +40,12 @@ int orders_pay(db *d, const char *rid, uint64_t user_id, const char *public_id,
 
 /* Cancels an order owned by user_id (PENDING_PAYMENT or PAID). Idempotent. */
 int orders_cancel(db *d, const char *rid, uint64_t user_id, const char *public_id, order_out *out);
+
+/* Administrator actions on ANY customer's order. Cancel releases or restocks exactly like the
+ * customer path; fulfil moves PAID -> SHIPPED -> DELIVERED. Both are audited with the admin's id. */
+int orders_admin_cancel(db *d, const char *rid, uint64_t admin_id, const char *public_id, order_out *out);
+int orders_admin_fulfil(db *d, const char *rid, uint64_t admin_id, const char *public_id,
+                        order_status to, order_out *out);
 
 /* Expires up to `max` overdue PENDING_PAYMENT orders, releasing their stock.
  * Returns how many were expired, or -1 on database failure. */
