@@ -4,9 +4,11 @@ Online retail store management system built on Linux systems programming:
 C (pthreads, sockets, POSIX), MySQL, Apache, HTML/CSS/JS. The centerpiece is a
 concurrency-safe checkout engine that cannot oversell stock.
 
-Status: **Phase 6 complete**: checkout engine, failure injection, security hardening,
-observability and a measured performance study. The frontend, Apache/TLS deployment, CI and
-the demo are Phase 7. Where to start reading:
+Status: **feature-complete through Phase 7**: checkout engine, failure injection, security
+hardening, observability, a measured performance study, a storefront and admin console on the real
+APIs, and an Apache + TLS deployment. Not yet verified: the GitHub Actions workflow (`.github/workflows/ci.yml`)
+has not run on GitHub, and `scripts/fresh-clone-test.sh` needs the work to be pushed before it can run.
+Where to start reading:
 
 | document | what it is |
 |---|---|
@@ -15,6 +17,9 @@ the demo are Phase 7. Where to start reading:
 | [docs/SECURITY.md](docs/SECURITY.md) | threat model, controls with the test proving each, residual risks |
 | [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | measured results: worker pool, overload, hot-row contention, query plans |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | health, metrics, log events, every config variable, troubleshooting |
+| [docs/API.md](docs/API.md) | every endpoint, with real request and response examples |
+| [docs/INSTALL.md](docs/INSTALL.md) | installation, Apache/TLS stack, troubleshooting |
+| [docs/DEMO.md](docs/DEMO.md) | a 12-minute demo script and an 8-slide outline |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PLAN.md](docs/PLAN.md), [docs/PHASE4_NOTES.md](docs/PHASE4_NOTES.md) | design and plan |
 
 ## Quick start (Linux via Docker; nothing to install on the host)
@@ -28,6 +33,17 @@ scripts/dev.sh sh scripts/db-init.sh --seed      # schema + DEV demo data (Power
 Demo accounts (**dev seed only**, passwords are public): `admin@stockforge.test`,
 `ava@stockforge.test`, `ben@stockforge.test`. Passwords are in `db/seed/gen_seed.py`.
 The seed includes a numbered keyboard with exactly **1 unit in stock** for checkout demos.
+
+## Run the whole thing (Apache + TLS + app + database)
+
+```bash
+scripts/dev.sh sh scripts/gen-dev-cert.sh          # self-signed certificate, development only
+docker compose --env-file .env -f deploy/docker-compose.yml --profile stack up -d --build --wait
+```
+
+Storefront: https://localhost:8443 . Admin console: https://localhost:8443/admin/ (sign in as the demo admin).
+Details, plain-HTTP dev mode and troubleshooting: [docs/INSTALL.md](docs/INSTALL.md).
+`scripts/dev.sh sh scripts/reset-demo.sh` rebuilds the demo data (48 products, 45 days of order history).
 
 ## Build and test
 

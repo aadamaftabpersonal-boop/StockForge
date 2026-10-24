@@ -1,10 +1,48 @@
-# StockForge — Architecture (Phase 2)
+# StockForge — Architecture
 
-## 1. Topology
+## 0. The system on one page
+
+```mermaid
+flowchart LR
+  subgraph Browser
+    S["Storefront<br/>web/index.html + shop.js"]
+    A["Admin console<br/>web/admin + admin.js"]
+  end
+  subgraph Apache["Apache 2.4 (container: web)"]
+    T["TLS 1.2/1.3, HSTS, CSP<br/>mod_reqtimeout, gzip"]
+    ST["static files /"]
+    PX["mod_proxy: /api/ and /healthz<br/>/metrics denied"]
+  end
+  subgraph App["stockforged (container: app, non-root, read-only fs)"]
+    ACC["acceptor thread<br/>accept4, 503 when queue full"]
+    Q[("bounded fd queue<br/>mutex + condvar")]
+    W["N worker threads<br/>parse, route, handle<br/>one MySQL connection each"]
+    SW["expiry sweeper thread<br/>releases unpaid reservations"]
+    SIG["sigwait thread<br/>graceful shutdown"]
+  end
+  DB[("MySQL 8.4 / InnoDB<br/>READ COMMITTED<br/>CHECK reserved <= on_hand")]
+  S --> T
+  A --> T
+  T --> ST
+  T --> PX
+  PX -->|HTTP, one request per connection| ACC
+  ACC --> Q --> W
+  W -->|prepared statements only| DB
+  SW --> DB
+  SIG -.drain and exit.-> ACC
+```
+
+How a checkout travels: browser `POST /api/v1/orders` with an `Idempotency-Key` → Apache → acceptor
+queues the socket → a worker parses and routes it → **one transaction** (idempotency row, user row,
+cart, inventory rows locked in ascending id, reservations written) → JSON `201`. If the database is
+cut at any point, the transaction rolls back and a retry with the same key finds either nothing or the
+finished order, never half of one ([CHECKOUT.md](CHECKOUT.md), [FAILURE_TESTING.md](FAILURE_TESTING.md)).
+
+## 1. Topology (detail)
 
 ```
 Browser ──HTTPS──▶ Apache 2.4 (TLS, static /, gzip, proxy /api)
-                      │ HTTP/1.1 keep-alive (loopback)
+                      │ HTTP/1.1, one request per connection (loopback)
                       ▼
               ┌─────────────── stockforged (C) ────────────────┐
               │ acceptor thread                                │

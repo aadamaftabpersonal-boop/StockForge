@@ -23,6 +23,11 @@ Worker utilisation = `workers.busy / workers.total`; queue saturation = `queue.h
 Mean DB time per statement = `db.time_us / db.statements`. A rising `orders.deadlock_retries` means lock-order
 discipline has been broken; `retries_exhausted > 0` means clients are seeing `503 DB_BUSY`.
 
+Behind Apache, `/metrics` is **denied** (`403`) so it is never public. Administrators read the
+same document at `GET /api/v1/admin/metrics`, which is what the console's System page shows
+(refreshed every 5 seconds; "Run consistency check" calls `GET /api/v1/admin/reconcile`).
+Scrapers inside the private network can reach the app container's port 8080 directly with the bearer token.
+
 ### Logs (stderr, one JSON object per line)
 Fields: `ts` (UTC, ms), `level`, `event`, then event fields. User-controlled text is JSON-escaped and truncated.
 **Never logged:** passwords, session tokens, CSRF tokens, request bodies, query strings, cookies, card data.
@@ -69,6 +74,18 @@ Stable strings in `error.code`: `VALIDATION_FAILED`, `INVALID_JSON`, `UNAUTHENTI
 | `SF_EXPIRY_SWEEP_MS` | `5000` | expiry sweeper interval |
 | `SF_METRICS_TOKEN` | empty (disabled) | bearer token for `/metrics`, at least 16 characters |
 | `SF_DEBUG` | `0` | enables `/debug/*` routes. **Never in production.** |
+
+## Deployment notes (Apache stack)
+
+* Compose profile `stack` adds the `app` container (non-root, read-only root filesystem) and `web` (Apache 2.4).
+  The app is **not** published to the host; only Apache is (`8443` TLS, `8081` HTTP redirect).
+* Apache appends the connecting address to `X-Forwarded-For`; the app is started with `SF_TRUST_PROXY=1`
+  so rate limits are per real client, not per proxy.
+* Rebuild the app image after changing C code: `docker compose --env-file .env -f deploy/docker-compose.yml --profile stack up -d --build app`.
+  Changes under `web/` need no rebuild (mounted read-only); hard-reload the browser.
+* Demo data: `scripts/dev.sh sh scripts/reset-demo.sh` (destroys and rebuilds the demo database, then runs the
+  consistency checker). Never point it at real data.
+* Full install and troubleshooting: [INSTALL.md](INSTALL.md).
 
 ## Troubleshooting
 
